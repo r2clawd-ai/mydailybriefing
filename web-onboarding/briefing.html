@@ -65,7 +65,7 @@
     /* ─── Sticky topbar ─── */
     .topbar {
       position: sticky; top: 0; z-index: 100;
-      background: rgba(13,13,13,.94);
+      background: rgba(13,13,13,.96);
       backdrop-filter: saturate(180%) blur(20px);
       -webkit-backdrop-filter: saturate(180%) blur(20px);
       border-bottom: 1px solid var(--border);
@@ -73,28 +73,14 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 12px;
     }
-    .logo { font-size: 17px; font-weight: 800; letter-spacing: -.2px; display: flex; align-items: center; gap: 6px; }
+    .topbar-left { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+    .logo { font-size: 15px; font-weight: 800; letter-spacing: .04em; line-height: 1; white-space: nowrap; }
     .logo-dot { color: var(--accent); }
-    .loc-pill {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      background: var(--s2);
-      border: 1px solid var(--b2);
-      border-radius: 100px;
-      padding: 4px 10px;
-      font-size: 12px;
-      color: var(--t2);
-      cursor: pointer;
-      transition: border-color var(--t);
-      max-width: 140px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .loc-pill:hover { border-color: var(--accent); color: var(--accent); }
-    .topbar-right { display: flex; gap: 8px; }
+    .topbar-loc { font-size: 11px; color: var(--muted); margin-top: 2px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+    .topbar-loc:hover { color: var(--t2); }
+    .topbar-right { display: flex; gap: 8px; flex-shrink: 0; }
     .icon-btn {
       width: 34px; height: 34px; border-radius: 50%;
       background: var(--s2); border: 1px solid var(--b2);
@@ -433,8 +419,10 @@
 
 <!-- Topbar -->
 <div class="topbar">
-  <div class="logo">MY<span class="logo-dot">.</span>BRIEFING</div>
-  <div class="loc-pill" onclick="openSettings()">📍 <span id="loc-text">…</span></div>
+  <div class="topbar-left" onclick="openSettings()">
+    <div class="logo">MY<span class="logo-dot">.</span>BRIEFING</div>
+    <div class="topbar-loc" id="loc-text">Loading…</div>
+  </div>
   <div class="topbar-right">
     <div class="icon-btn" id="share-btn" onclick="share()" title="Share">⬆</div>
     <div class="icon-btn" id="refresh-btn" onclick="loadBriefing(true)" title="Refresh">↻</div>
@@ -499,7 +487,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const API = 'https://advertising-connectivity-press-mph.trycloudflare.com';
+const API = 'https://ampland-enlarge-und-pharmacies.trycloudflare.com';
 
 let briefingData = null;
 let profile      = null;
