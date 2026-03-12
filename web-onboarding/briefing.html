@@ -875,15 +875,26 @@ function initSectionNav() {
   const pills = document.querySelectorAll('.nav-pill');
   let userScrolling = false;
 
+  const navBar = document.querySelector('.section-nav');
+
+  function snapPillIntoNav(pill) {
+    if (!navBar || !pill) return;
+    // Scroll only the horizontal nav bar, never the page
+    const navRect = navBar.getBoundingClientRect();
+    const pillRect = pill.getBoundingClientRect();
+    const pillLeft = pillRect.left - navRect.left + navBar.scrollLeft;
+    const center = pillLeft - (navBar.clientWidth / 2) + (pill.offsetWidth / 2);
+    navBar.scrollLeft = Math.max(0, center);
+  }
+
   pills.forEach(p => {
     p.addEventListener('click', () => {
       userScrolling = true;
       pills.forEach(x => x.classList.remove('active'));
       p.classList.add('active');
-      p.scrollIntoView({ behavior:'instant', block:'nearest', inline:'center' });
+      snapPillIntoNav(p);
       const target = document.getElementById(p.dataset.target);
       if (target) {
-        // offset for sticky topbar + nav
         const top = target.getBoundingClientRect().top + window.scrollY - 110;
         window.scrollTo({ top, behavior:'smooth' });
       }
@@ -891,16 +902,14 @@ function initSectionNav() {
     });
   });
 
-  // Scroll spy — only updates the active pill class, never calls scrollIntoView
+  // Scroll spy — only updates active class + snaps pill horizontally, never scrolls page
   const obs = new IntersectionObserver(entries => {
     if (userScrolling) return;
     entries.forEach(e => {
       if (e.isIntersecting) {
         const id = e.target.id;
         pills.forEach(p => { p.classList.toggle('active', p.dataset.target === id); });
-        // Snap active pill into horizontal view without smooth (prevents feedback loop)
-        const active = document.querySelector('.nav-pill.active');
-        if (active) active.scrollIntoView({ behavior:'instant', block:'nearest', inline:'nearest' });
+        snapPillIntoNav(document.querySelector('.nav-pill.active'));
       }
     });
   }, { threshold: 0.25, rootMargin: '-100px 0px -50% 0px' });
