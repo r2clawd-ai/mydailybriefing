@@ -48,14 +48,81 @@ function stripHTML(str) {
   return String(str).replace(/<[^>]*>/g, '').trim();
 }
 
-function dedup(articles) {
-  const seen = new Set();
-  return articles.filter(a => {
-    const key = (a.title || '').toLowerCase().slice(0, 60);
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+// Stop words to ignore when comparing titles
+const STOP = new Set(['a','an','the','in','on','at','to','for','of','and','or','but',
+  'is','are','was','were','be','been','being','have','has','had','do','does','did',
+  'will','would','could','should','may','might','with','from','by','about','as',
+  'into','through','during','before','after','above','below','up','down','out',
+  'off','over','under','again','then','once','here','there','when','where','why',
+  'how','all','both','each','few','more','most','other','some','such','than','too',
+  'very','just','not','its','it','this','that','these','those','new','says','said']);
+
+function titleWords(title) {
+  return (title || '').toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 2 && !STOP.has(w));
+}
+
+function bigrams(words) {
+  const bg = new Set();
+  for (let i = 0; i < words.length - 1; i++) bg.add(`${words[i]}|${words[i+1]}`);
+  return bg;
+}
+
+// Extract capitalized multi-word entities from raw title (e.g. "Top Hat", "Sioux Falls")
+function properNouns(rawTitle) {
+  const tokens = (rawTitle || '').replace(/[^\w\s]/g, ' ').split(/\s+/).filter(Boolean);
+  const entities = new Set();
+  for (let i = 0; i < tokens.length - 1; i++) {
+    const a = tokens[i], b = tokens[i + 1];
+    // Both words capitalized, neither is a sentence-start stop word
+    if (/^[A-Z]/.test(a) && /^[A-Z]/.test(b) && a.length > 2 && b.length > 2) {
+      entities.add(`${a.toLowerCase()} ${b.toLowerCase()}`);
+    }
+  }
+  return entities;
+}
+
+function similarity(a, b) {
+  const wa = titleWords(a);
+  const wb = titleWords(b);
+  if (!wa.length || !wb.length) return 0;
+
+  // Unigram overlap
+  const sa = new Set(wa), sb = new Set(wb);
+  let uniOverlap = 0;
+  sa.forEach(w => { if (sb.has(w)) uniOverlap++; });
+  const uniScore = uniOverlap / Math.min(sa.size, sb.size);
+
+  // Bigram overlap
+  const ba = bigrams(wa), bb = bigrams(wb);
+  let biOverlap = 0;
+  ba.forEach(g => { if (bb.has(g)) biOverlap++; });
+  const biScore = ba.size && bb.size ? biOverlap / Math.min(ba.size, bb.size) : 0;
+
+  // Proper-noun entity match — shared capitalized phrase = almost certainly same story
+  const pa = properNouns(a), pb = properNouns(b);
+  let pnMatch = 0;
+  pa.forEach(e => { if (pb.has(e)) pnMatch++; });
+  // One shared proper-noun entity + any word overlap = likely same story
+  const pnScore = pnMatch > 0 && uniOverlap > 0 ? 0.6 : 0;
+
+  return Math.max(uniScore, biScore * 1.4, pnScore);
+}
+
+function dedup(articles, threshold = 0.55) {
+  const kept = [];
+  for (const a of articles) {
+    const isDupe = kept.some(k => similarity(k.title, a.title) >= threshold);
+    if (!isDupe) kept.push(a);
+  }
+  return kept;
+}
+
+// Cross-array dedup: remove from `incoming` anything too similar to already-seen titles
+function dedupAgainst(incoming, seen, threshold = 0.5) {
+  return incoming.filter(a => !seen.some(s => similarity(s.title, a.title) >= threshold));
 }
 
 // ---------- Public API ----------
@@ -104,9 +171,13 @@ async function getWeather(lat, lng, nwsGrid = null) {
  */
 async function getLocalNews(city, state) {
   try {
-    const q = `${city} ${state} news`;
-    const items = await fetchRSS(GOOGLE_NEWS_RSS(q));
-    return dedup(items.slice(0, 5).map(normalizeItem));
+    // Fetch from two queries for coverage, then dedup aggressively
+    const [r1, r2] = await Promise.all([
+      fetchRSS(GOOGLE_NEWS_RSS(`${city} ${state} news`)).catch(() => []),
+      fetchRSS(GOOGLE_NEWS_RSS(`${city} ${state} local`)).catch(() => []),
+    ]);
+    const merged = [...r1, ...r2].map(normalizeItem);
+    return dedup(merged, 0.45).slice(0, 6);
   } catch (e) {
     console.warn('Local news error:', e.message);
     return [];
@@ -216,7 +287,7 @@ print(json.dumps(results))
   });
 }
 
-module.exports = { getWeather, getLocalNews, getNationalNews, getSportsNews, getTopicNews, getMarkets };
+module.exports = { getWeather, getLocalNews, getNationalNews, getSportsNews, getTopicNews, getMarkets, dedupAgainst };
 
 /**
  * Generate actionable weather summary line.

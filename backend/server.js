@@ -213,6 +213,33 @@ app.get('/api/users/:token/briefing', async (req, res) => {
       weather.current.action = content.getWeatherAction(weather.current);
     }
 
+    // Cross-section deduplication — remove stories already seen in higher-priority sections
+    // Priority: local_news > hyper_local news > interests > national_news
+    const { dedupAgainst } = content;
+    const localNewsItems = Array.isArray(local_news) ? local_news : [];
+
+    // Deduplicate hyper_local news against local_news
+    if (hyper_local && Array.isArray(hyper_local.news)) {
+      hyper_local.news = dedupAgainst(hyper_local.news, localNewsItems);
+    }
+    if (hyper_local && Array.isArray(hyper_local.civic)) {
+      hyper_local.civic = dedupAgainst(hyper_local.civic, localNewsItems);
+    }
+
+    // Deduplicate interests against local_news + hyper_local combined
+    const seenLocal = [
+      ...localNewsItems,
+      ...(hyper_local?.news || []),
+      ...(hyper_local?.civic || []),
+    ];
+    const interests_deduped = dedupAgainst(Array.isArray(interests_news) ? interests_news : [], seenLocal);
+
+    // Deduplicate national_news against local (national stories sometimes echo local)
+    const national_deduped = dedupAgainst(
+      Array.isArray(national_news) ? national_news : [],
+      localNewsItems
+    );
+
     res.json({
       generated_at: new Date().toISOString(),
       user: {
@@ -222,10 +249,10 @@ app.get('/api/users/:token/briefing', async (req, res) => {
       sections: {
         weather,
         markets,
-        national_news,
+        national_news: national_deduped,
         local_news,
         sports,
-        interests: interests_news,
+        interests: interests_deduped,
         local_accounts,
         suggested_accounts: getSuggestedNational(user.interests),
         hyper_local,
