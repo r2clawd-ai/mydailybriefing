@@ -24,12 +24,14 @@ const PORT = process.env.PORT || 3001;
 
 app.use(cors({
   origin: [
+    'https://mydailybriefing.app',
+    'https://www.mydailybriefing.app',
     'https://mydailybriefing.surge.sh',
     'http://localhost:3000',
     'http://localhost:5500',
     'http://127.0.0.1:5500',
-    /trycloudflare.com$/,
-    /surge.sh$/,
+    /trycloudflare\.com$/,
+    /surge\.sh$/,
   ],
   credentials: true,
 }));
