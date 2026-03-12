@@ -32,18 +32,14 @@
       --safe-top: env(safe-area-inset-top, 0px);
       --safe-bot: env(safe-area-inset-bottom, 0px);
     }
-    html { height: 100%; }
     body {
       background: var(--bg);
       color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
       font-size: 15px;
       line-height: 1.55;
-      min-height: 100%;
       -webkit-font-smoothing: antialiased;
       overflow-x: hidden;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
     }
     a { color: inherit; text-decoration: none; }
 
@@ -584,14 +580,15 @@ async function loadBriefing(refresh = false) {
     clearInterval(tick); bar.style.width = '100%';
     label && (label.textContent = 'Ready!');
     setTimeout(() => {
-      document.getElementById('loading-screen').classList.add('gone');
-      setTimeout(() => document.getElementById('loading-screen').classList.add('hidden'), 400);
+      const ls = document.getElementById('loading-screen');
+      ls.classList.add('gone');
+      setTimeout(() => ls.remove(), 400);
     }, 300);
 
     render(briefingData);
   } catch (e) {
     clearInterval(tick);
-    document.getElementById('loading-screen').classList.add('gone','hidden');
+    document.getElementById('loading-screen')?.remove();
     document.getElementById('content').innerHTML = `
       <div class="empty">
         <div style="font-size:32px;margin-bottom:12px">⚠️</div>
