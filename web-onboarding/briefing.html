@@ -32,7 +32,7 @@
       --safe-top: env(safe-area-inset-top, 0px);
       --safe-bot: env(safe-area-inset-bottom, 0px);
     }
-    html { scroll-behavior: smooth; height: 100%; }
+    html { height: 100%; }
     body {
       background: var(--bg);
       color: var(--text);
@@ -876,25 +876,37 @@ function toggleFc(card) {
 // ── Section nav (scroll spy) ──────────────────────────────────────
 function initSectionNav() {
   const pills = document.querySelectorAll('.nav-pill');
+  let userScrolling = false;
+
   pills.forEach(p => {
     p.addEventListener('click', () => {
+      userScrolling = true;
       pills.forEach(x => x.classList.remove('active'));
       p.classList.add('active');
-      document.getElementById(p.dataset.target)?.scrollIntoView({ behavior:'smooth', block:'start' });
-      // Scroll pill into view in nav
-      p.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' });
+      p.scrollIntoView({ behavior:'instant', block:'nearest', inline:'center' });
+      const target = document.getElementById(p.dataset.target);
+      if (target) {
+        // offset for sticky topbar + nav
+        const top = target.getBoundingClientRect().top + window.scrollY - 110;
+        window.scrollTo({ top, behavior:'smooth' });
+      }
+      setTimeout(() => { userScrolling = false; }, 800);
     });
   });
 
+  // Scroll spy — only updates the active pill class, never calls scrollIntoView
   const obs = new IntersectionObserver(entries => {
+    if (userScrolling) return;
     entries.forEach(e => {
       if (e.isIntersecting) {
         const id = e.target.id;
         pills.forEach(p => { p.classList.toggle('active', p.dataset.target === id); });
-        document.querySelector(`.nav-pill.active`)?.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' });
+        // Snap active pill into horizontal view without smooth (prevents feedback loop)
+        const active = document.querySelector('.nav-pill.active');
+        if (active) active.scrollIntoView({ behavior:'instant', block:'nearest', inline:'nearest' });
       }
     });
-  }, { threshold: 0.3, rootMargin: '-80px 0px -40% 0px' });
+  }, { threshold: 0.25, rootMargin: '-100px 0px -50% 0px' });
 
   document.querySelectorAll('.section[id]').forEach(s => obs.observe(s));
 }
