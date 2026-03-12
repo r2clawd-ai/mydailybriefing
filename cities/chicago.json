@@ -1,0 +1,56 @@
+{
+  "city_id": "chicago",
+  "name": "Chicago",
+  "state": "IL",
+  "timezone": "America/Chicago",
+  "coordinates": {
+    "lat": 41.8781,
+    "lon": -87.6298
+  },
+  "population": 2700000,
+  "theme": {
+    "primary_color": "#C41E3A",
+    "secondary_color": "#00A9E0",
+    "icon": "🏙️"
+  },
+  "data_sources": {
+    "weather": {
+      "provider": "nws",
+      "grid": {
+        "office": "LOT",
+        "gridX": 76,
+        "gridY": 73
+      }
+    },
+    "news": {
+      "local_rss": [
+        "https://www.chicagotribune.com/arcio/rss/category/news/",
+        "https://blockclubchicago.org/feed/"
+      ],
+      "twitter_accounts": [
+        "@chicagotribune",
+        "@BlockClubCHI",
+        "@ChicagosMayor"
+      ]
+    },
+    "traffic": {
+      "provider": "google_maps",
+      "transit_agencies": ["CTA", "Metra", "Pace"]
+    },
+    "sports": {
+      "teams": [
+        {"name": "Cubs", "league": "MLB", "sport": "baseball"},
+        {"name": "White Sox", "league": "MLB", "sport": "baseball"},
+        {"name": "Bulls", "league": "NBA", "sport": "basketball"},
+        {"name": "Blackhawks", "league": "NHL", "sport": "hockey"},
+        {"name": "Bears", "league": "NFL", "sport": "football"}
+      ]
+    }
+  },
+  "features": {
+    "traffic_enabled": true,
+    "transit_enabled": true,
+    "sports_enabled": true,
+    "events_enabled": true
+  }
+}

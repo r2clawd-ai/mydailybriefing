@@ -1,0 +1,53 @@
+{
+  "city_id": "dallas",
+  "name": "Dallas",
+  "state": "TX",
+  "timezone": "America/Chicago",
+  "coordinates": {
+    "lat": 32.7767,
+    "lon": -96.7970
+  },
+  "population": 1300000,
+  "theme": {
+    "primary_color": "#002D62",
+    "secondary_color": "#8C8B8A",
+    "icon": "🤠"
+  },
+  "data_sources": {
+    "weather": {
+      "provider": "nws",
+      "grid": {
+        "office": "FWD",
+        "gridX": 78,
+        "gridY": 108
+      }
+    },
+    "news": {
+      "local_rss": [
+        "https://www.dallasnews.com/arc/outboundfeeds/rss/"
+      ],
+      "twitter_accounts": [
+        "@dallasnews",
+        "@MayorEricJohnson"
+      ]
+    },
+    "traffic": {
+      "provider": "google_maps",
+      "transit_agencies": ["DART"]
+    },
+    "sports": {
+      "teams": [
+        {"name": "Rangers", "league": "MLB", "sport": "baseball"},
+        {"name": "Mavericks", "league": "NBA", "sport": "basketball"},
+        {"name": "Stars", "league": "NHL", "sport": "hockey"},
+        {"name": "Cowboys", "league": "NFL", "sport": "football"}
+      ]
+    }
+  },
+  "features": {
+    "traffic_enabled": true,
+    "transit_enabled": true,
+    "sports_enabled": true,
+    "events_enabled": true
+  }
+}

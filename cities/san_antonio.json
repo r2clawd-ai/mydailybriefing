@@ -1,0 +1,50 @@
+{
+  "city_id": "san_antonio",
+  "name": "San Antonio",
+  "state": "TX",
+  "timezone": "America/Chicago",
+  "coordinates": {
+    "lat": 29.4241,
+    "lon": -98.4936
+  },
+  "population": 1500000,
+  "theme": {
+    "primary_color": "#000000",
+    "secondary_color": "#C4CED4",
+    "icon": "🌶️"
+  },
+  "data_sources": {
+    "weather": {
+      "provider": "nws",
+      "grid": {
+        "office": "EWX",
+        "gridX": 154,
+        "gridY": 92
+      }
+    },
+    "news": {
+      "local_rss": [
+        "https://www.expressnews.com/rss/feed/San-Antonio-news-2064.php"
+      ],
+      "twitter_accounts": [
+        "@ExpressNews",
+        "@Ron_Nirenberg"
+      ]
+    },
+    "traffic": {
+      "provider": "google_maps",
+      "transit_agencies": ["VIA Metropolitan Transit"]
+    },
+    "sports": {
+      "teams": [
+        {"name": "Spurs", "league": "NBA", "sport": "basketball"}
+      ]
+    }
+  },
+  "features": {
+    "traffic_enabled": true,
+    "transit_enabled": true,
+    "sports_enabled": true,
+    "events_enabled": true
+  }
+}

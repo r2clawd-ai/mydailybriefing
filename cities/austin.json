@@ -1,0 +1,52 @@
+{
+  "city_id": "austin",
+  "name": "Austin",
+  "state": "TX",
+  "timezone": "America/Chicago",
+  "coordinates": {
+    "lat": 30.2672,
+    "lon": -97.7431
+  },
+  "population": 1000000,
+  "theme": {
+    "primary_color": "#BF5700",
+    "secondary_color": "#333F48",
+    "icon": "🎸"
+  },
+  "data_sources": {
+    "weather": {
+      "provider": "nws",
+      "grid": {
+        "office": "EWX",
+        "gridX": 155,
+        "gridY": 90
+      }
+    },
+    "news": {
+      "local_rss": [
+        "https://www.statesman.com/arcio/rss/category/news/",
+        "https://www.austinmonitor.com/feed/"
+      ],
+      "twitter_accounts": [
+        "@statesman",
+        "@AustinMonitor",
+        "@MayorAdler"
+      ]
+    },
+    "traffic": {
+      "provider": "google_maps",
+      "transit_agencies": ["Capital Metro"]
+    },
+    "sports": {
+      "teams": [
+        {"name": "Longhorns", "league": "NCAA", "sport": "college"}
+      ]
+    }
+  },
+  "features": {
+    "traffic_enabled": true,
+    "transit_enabled": true,
+    "sports_enabled": false,
+    "events_enabled": true
+  }
+}

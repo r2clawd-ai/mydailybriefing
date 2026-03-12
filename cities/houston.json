@@ -1,0 +1,54 @@
+{
+  "city_id": "houston",
+  "name": "Houston",
+  "state": "TX",
+  "timezone": "America/Chicago",
+  "coordinates": {
+    "lat": 29.7604,
+    "lon": -95.3698
+  },
+  "population": 2300000,
+  "theme": {
+    "primary_color": "#002D62",
+    "secondary_color": "#EB6E1F",
+    "icon": "🚀"
+  },
+  "data_sources": {
+    "weather": {
+      "provider": "nws",
+      "grid": {
+        "office": "HGX",
+        "gridX": 67,
+        "gridY": 100
+      }
+    },
+    "news": {
+      "local_rss": [
+        "https://www.houstonchronicle.com/rss/feed/Houston-news-2082.php",
+        "https://www.houstonpress.com/feeds/rss"
+      ],
+      "twitter_accounts": [
+        "@HoustonChron",
+        "@houstonpress",
+        "@SylvesterTurner"
+      ]
+    },
+    "traffic": {
+      "provider": "google_maps",
+      "transit_agencies": ["METRO"]
+    },
+    "sports": {
+      "teams": [
+        {"name": "Astros", "league": "MLB", "sport": "baseball"},
+        {"name": "Rockets", "league": "NBA", "sport": "basketball"},
+        {"name": "Texans", "league": "NFL", "sport": "football"}
+      ]
+    }
+  },
+  "features": {
+    "traffic_enabled": true,
+    "transit_enabled": true,
+    "sports_enabled": true,
+    "events_enabled": true
+  }
+}

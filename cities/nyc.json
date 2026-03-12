@@ -1,0 +1,60 @@
+{
+  "city_id": "nyc",
+  "name": "New York City",
+  "state": "NY",
+  "timezone": "America/New_York",
+  "coordinates": {
+    "lat": 40.7128,
+    "lon": -74.0060
+  },
+  "population": 8300000,
+  "theme": {
+    "primary_color": "#FF6B35",
+    "secondary_color": "#1A1A1A",
+    "icon": "🗽"
+  },
+  "data_sources": {
+    "weather": {
+      "provider": "nws",
+      "grid": {
+        "office": "OKX",
+        "gridX": 32,
+        "gridY": 34
+      }
+    },
+    "news": {
+      "local_rss": [
+        "https://rss.nytimes.com/services/xml/rss/nyt/NYRegion.xml",
+        "https://gothamist.com/feed",
+        "https://nypost.com/feed/"
+      ],
+      "twitter_accounts": [
+        "@NYTMetro",
+        "@Gothamist",
+        "@NYCMayor"
+      ]
+    },
+    "traffic": {
+      "provider": "google_maps",
+      "transit_agencies": ["MTA", "PATH", "NJ Transit"]
+    },
+    "sports": {
+      "teams": [
+        {"name": "Yankees", "league": "MLB", "sport": "baseball"},
+        {"name": "Mets", "league": "MLB", "sport": "baseball"},
+        {"name": "Knicks", "league": "NBA", "sport": "basketball"},
+        {"name": "Nets", "league": "NBA", "sport": "basketball"},
+        {"name": "Rangers", "league": "NHL", "sport": "hockey"},
+        {"name": "Islanders", "league": "NHL", "sport": "hockey"},
+        {"name": "Giants", "league": "NFL", "sport": "football"},
+        {"name": "Jets", "league": "NFL", "sport": "football"}
+      ]
+    }
+  },
+  "features": {
+    "traffic_enabled": true,
+    "transit_enabled": true,
+    "sports_enabled": true,
+    "events_enabled": true
+  }
+}

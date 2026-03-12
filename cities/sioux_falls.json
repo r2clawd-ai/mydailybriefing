@@ -1,0 +1,52 @@
+{
+  "city_id": "sioux_falls",
+  "name": "Sioux Falls",
+  "state": "SD",
+  "timezone": "America/Chicago",
+  "coordinates": {
+    "lat": 43.5460,
+    "lon": -96.7313
+  },
+  "population": 195000,
+  "theme": {
+    "primary_color": "#FF6B35",
+    "secondary_color": "#1A1A1A",
+    "icon": "⛰️"
+  },
+  "data_sources": {
+    "weather": {
+      "provider": "nws",
+      "grid": {
+        "office": "FSD",
+        "gridX": 66,
+        "gridY": 47
+      }
+    },
+    "news": {
+      "local_rss": [
+        "https://feeds.npr.org/1001/rss.xml",
+        "https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml"
+      ],
+      "twitter_accounts": [
+        "@argusleader",
+        "@CityofSiouxFalls"
+      ]
+    },
+    "traffic": {
+      "provider": "google_maps",
+      "transit_agencies": []
+    },
+    "sports": {
+      "teams": [
+        {"name": "Stampede", "league": "USHL", "sport": "hockey"},
+        {"name": "Canaries", "league": "AA", "sport": "baseball"}
+      ]
+    }
+  },
+  "features": {
+    "traffic_enabled": false,
+    "transit_enabled": false,
+    "sports_enabled": true,
+    "events_enabled": true
+  }
+}

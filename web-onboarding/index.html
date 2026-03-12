@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0d0d" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="description" content="Stop opening 5 apps every morning. One personalized briefing covers local news, weather, markets, politics, and sports — in under 2 minutes." />
+  <link rel="manifest" href="/manifest.json" />
+  <title>My Daily Briefing — Get 40 minutes back every morning</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:      #0d0d0d;
+      --bg2:     #111111;
+      --surface: #161616;
+      --s2:      #1e1e1e;
+      --border:  #252525;
+      --b2:      #2e2e2e;
+      --accent:  #f0c040;
+      --red:     #e05050;
+      --green:   #4db86a;
+      --blue:    #4a9eff;
+      --text:    #f0f0f0;
+      --t2:      #b0b0b0;
+      --muted:   #666666;
+      --r:       12px;
+      --t:       0.18s ease;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 15px;
+      line-height: 1.55;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--accent); text-decoration: none; }
+
+    /* ─── Landing ─── */
+    .landing {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 24px 48px;
+      text-align: center;
+      background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(240,192,64,.12) 0%, transparent 60%);
+    }
+    .logo-mark {
+      font-size: 42px;
+      margin-bottom: 20px;
+      filter: drop-shadow(0 0 24px rgba(240,192,64,.4));
+    }
+    .landing h1 {
+      font-size: clamp(28px, 7vw, 44px);
+      font-weight: 800;
+      letter-spacing: -.8px;
+      line-height: 1.15;
+      max-width: 560px;
+    }
+    .landing h1 em { font-style: normal; color: var(--accent); }
+    .landing-sub {
+      font-size: 17px;
+      color: var(--t2);
+      max-width: 440px;
+      margin: 16px auto 0;
+      line-height: 1.6;
+    }
+    /* Social proof row */
+    .social-proof-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 24px auto 0;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .proof-item { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--t2); }
+    .proof-icon  { font-size: 16px; }
+    .proof-divider { color: var(--muted); font-size: 16px; }
+
+    /* What you get grid */
+    .what-you-get {
+      margin: 28px auto 0;
+      max-width: 480px;
+      width: 100%;
+    }
+    .wg-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    .wg-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+    .wg-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--b2);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--t2);
+      text-align: left;
+    }
+    .wg-icon { font-size: 18px; flex-shrink: 0; }
+    .cta-row {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 36px;
+      flex-wrap: wrap;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #111;
+      font-weight: 700;
+      font-size: 16px;
+      padding: 14px 32px;
+      border-radius: 100px;
+      border: none;
+      cursor: pointer;
+      transition: filter var(--t), transform var(--t);
+    }
+    .btn-primary:hover { filter: brightness(1.08); transform: translateY(-1px); }
+    .btn-ghost {
+      background: transparent;
+      color: var(--t2);
+      font-size: 15px;
+      padding: 14px 24px;
+      border-radius: 100px;
+      border: 1px solid var(--b2);
+      cursor: pointer;
+      transition: border-color var(--t), color var(--t);
+    }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Trust strip */
+    .trust-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: center;
+      margin-top: 40px;
+    }
+    .trust-item { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 5px; }
+
+    /* ─── Onboarding wrapper ─── */
+    #onboarding { display: none; max-width: 560px; margin: 0 auto; padding: 24px 16px 80px; min-height: 100vh; }
+
+    /* Progress bar */
+    .progress-wrap { height: 3px; background: var(--border); border-radius: 2px; margin-bottom: 32px; }
+    .progress-bar  { height: 3px; background: var(--accent); border-radius: 2px; transition: width .4s ease; }
+
+    /* Steps */
+    .step { display: none; }
+    .step.active { display: block; }
+    .step-eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 8px; }
+    .step h2 { font-size: 26px; font-weight: 800; letter-spacing: -.4px; line-height: 1.25; margin-bottom: 8px; }
+    .step-hint  { font-size: 14px; color: var(--t2); margin-bottom: 24px; }
+
+    /* Inputs */
+    .field {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--b2);
+      border-radius: var(--r);
+      padding: 14px 16px;
+      font-size: 16px;
+      color: var(--text);
+      outline: none;
+      transition: border-color var(--t);
+      margin-bottom: 10px;
+    }
+    .field:focus { border-color: var(--accent); }
+    .field::placeholder { color: var(--muted); }
+    .field-confirm { font-size: 13px; color: var(--green); min-height: 18px; margin-bottom: 16px; }
+    .field-error   { font-size: 13px; color: var(--red); min-height: 18px; margin-bottom: 16px; }
+
+    /* Tag chips */
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+    .chip {
+      padding: 8px 16px;
+      border-radius: 100px;
+      border: 1px solid var(--b2);
+      font-size: 14px;
+      cursor: pointer;
+      transition: all var(--t);
+      user-select: none;
+      background: var(--surface);
+    }
+    .chip:hover  { border-color: var(--accent); }
+    .chip.on     { background: var(--accent); color: #111; border-color: var(--accent); font-weight: 600; }
+
+    /* School chips */
+    .school-chip {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: var(--surface);
+      border: 1px solid var(--b2);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: border-color var(--t), background var(--t);
+      width: 100%;
+      text-align: left;
+    }
+    .school-chip:hover { border-color: var(--accent); }
+    .school-chip.on    { border-color: var(--accent); background: rgba(240,192,64,.08); }
+    .school-chip-name  { font-size: 14px; font-weight: 600; }
+    .school-chip-meta  { font-size: 12px; color: var(--muted); }
+    .schools-list      { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+
+    /* Nav buttons */
+    .nav-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-top: 8px;
+    }
+    .btn-next {
+      flex: 1;
+      background: var(--accent);
+      color: #111;
+      font-weight: 700;
+      font-size: 16px;
+      padding: 15px;
+      border-radius: 100px;
+      border: none;
+      cursor: pointer;
+      transition: filter var(--t);
+    }
+    .btn-next:hover    { filter: brightness(1.08); }
+    .btn-next:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-back {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 1px solid var(--b2);
+      color: var(--t2);
+      font-size: 20px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: border-color var(--t);
+      flex-shrink: 0;
+    }
+    .btn-back:hover { border-color: var(--accent); }
+    .skip-link { font-size: 13px; color: var(--muted); cursor: pointer; text-align: center; margin-top: 14px; }
+    .skip-link:hover { color: var(--t2); }
+
+    /* Preview section */
+    .preview-section { margin-top: 28px; }
+    .preview-label { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 12px; }
+    #briefing-preview { background: var(--surface); border: 1px solid var(--b2); border-radius: var(--r); padding: 20px; }
+
+    /* Preview cards */
+    .prev-section { margin-bottom: 20px; }
+    .prev-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 12px; }
+    .prev-weather-main { display: flex; align-items: flex-start; justify-content: space-between; }
+    .prev-temp { font-size: 40px; font-weight: 800; letter-spacing: -1px; }
+    .prev-temp-unit { font-size: 18px; font-weight: 400; color: var(--muted); }
+    .prev-w-icon { font-size: 36px; }
+    .prev-w-name { font-size: 13px; color: var(--t2); margin-top: 2px; }
+    .prev-action { background: var(--s2); border-radius: 8px; padding: 8px 12px; font-size: 12px; color: var(--accent); margin-top: 10px; }
+    .prev-forecast { display: none; flex-direction: column; gap: 2px; margin-top: 12px; border-top: 1px solid var(--border); padding-top: 12px; }
+    .prev-forecast.open { display: flex; }
+    .prev-fc-row { display: flex; gap: 10px; align-items: center; font-size: 12px; padding: 4px 0; border-bottom: 1px solid var(--border); }
+    .prev-fc-row:last-child { border-bottom: none; }
+    .prev-fc-day { width: 70px; color: var(--t2); }
+    .prev-fc-icon { width: 20px; }
+    .prev-fc-desc { flex: 1; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .prev-fc-temp { font-weight: 600; }
+    .forecast-toggle-row { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); cursor: pointer; margin-top: 10px; }
+    .prev-mkt-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .prev-mkt { background: var(--s2); border-radius: 8px; padding: 10px; }
+    .prev-mkt-sym { font-size: 10px; color: var(--muted); font-weight: 600; letter-spacing: .05em; }
+    .prev-mkt-price { font-size: 16px; font-weight: 800; margin-top: 2px; }
+    .prev-mkt-chg { font-size: 11px; font-weight: 600; margin-top: 2px; }
+    .up   { color: var(--green); }
+    .down { color: var(--red); }
+    .prev-news { display: flex; flex-direction: column; gap: 10px; }
+    .prev-news-item { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
+    .prev-news-item:hover .prev-news-title { color: var(--accent); }
+    .prev-news-num { font-size: 11px; color: var(--muted); font-weight: 700; width: 16px; flex-shrink: 0; padding-top: 1px; }
+    .prev-news-title { font-size: 13px; font-weight: 500; line-height: 1.4; transition: color var(--t); }
+    .prev-news-src { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    /* Done state */
+    .done-state { text-align: center; padding: 40px 0; }
+    .done-icon { font-size: 64px; margin-bottom: 20px; }
+    .done-state h2 { font-size: 28px; font-weight: 800; margin-bottom: 12px; }
+    .done-state p { font-size: 16px; color: var(--t2); margin-bottom: 28px; line-height: 1.6; }
+    .open-btn {
+      display: inline-block;
+      background: var(--accent);
+      color: #111;
+      font-weight: 700;
+      font-size: 17px;
+      padding: 16px 40px;
+      border-radius: 100px;
+      border: none;
+      cursor: pointer;
+      transition: filter var(--t);
+    }
+    .open-btn:hover { filter: brightness(1.08); }
+
+    /* Loading overlay */
+    .loading-overlay {
+      position: fixed; inset: 0; z-index: 999;
+      background: var(--bg);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+    .loading-overlay.show { display: flex; }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-size: 15px; color: var(--t2); }
+  </style>
+</head>
+<body>
+
+<!-- Loading overlay -->
+<div class="loading-overlay" id="loading-overlay">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loading-text">Building your briefing…</div>
+</div>
+
+<!-- ── Landing page ── -->
+<div class="landing" id="landing">
+  <div class="logo-mark">☀️</div>
+  <h1>Get <em>40 minutes back</em><br>every morning.</h1>
+  <p class="landing-sub">
+    You open 5 apps before breakfast. Weather. News. Stocks. Local. Sports.<br>
+    My Daily Briefing replaces all of them — personalized to your ZIP code, ready in under 2 minutes.
+  </p>
+
+  <div class="social-proof-row">
+    <div class="proof-item"><span class="proof-icon">📱</span><span>Replaces 5+ apps</span></div>
+    <div class="proof-divider">·</div>
+    <div class="proof-item"><span class="proof-icon">⏱</span><span>Under 2 minutes</span></div>
+    <div class="proof-divider">·</div>
+    <div class="proof-item"><span class="proof-icon">📍</span><span>Your ZIP, not just your city</span></div>
+  </div>
+
+  <div class="cta-row">
+    <button class="btn-primary" onclick="startOnboarding()">Build my free briefing →</button>
+    <button class="btn-ghost" onclick="tryDemo()">See an example</button>
+  </div>
+
+  <div class="what-you-get">
+    <div class="wg-label">What's in your briefing</div>
+    <div class="wg-grid">
+      <div class="wg-item"><span class="wg-icon">⛅</span><span>Actionable weather</span></div>
+      <div class="wg-item"><span class="wg-icon">📍</span><span>Neighborhood news</span></div>
+      <div class="wg-item"><span class="wg-icon">📈</span><span>Your stocks, live</span></div>
+      <div class="wg-item"><span class="wg-icon">🏛</span><span>Your senators &amp; rep</span></div>
+      <div class="wg-item"><span class="wg-icon">🏆</span><span>HS sports &amp; scores</span></div>
+      <div class="wg-item"><span class="wg-icon">🏙</span><span>City council &amp; business</span></div>
+      <div class="wg-item"><span class="wg-icon">📰</span><span>National headlines</span></div>
+      <div class="wg-item"><span class="wg-icon">💡</span><span>Topics you choose</span></div>
+    </div>
+  </div>
+
+  <div class="trust-strip">
+    <span class="trust-item">✅ Free</span>
+    <span class="trust-item">✅ No spam</span>
+    <span class="trust-item">✅ No app download needed</span>
+    <span class="trust-item">✅ Works on any device</span>
+  </div>
+</div>
+
+<!-- ── Onboarding ── -->
+<div id="onboarding">
+  <div class="progress-wrap"><div class="progress-bar" id="progress-bar" style="width:14%"></div></div>
+
+  <!-- Step 1: ZIP -->
+  <div class="step active" id="step-1">
+    <div class="step-eyebrow">Step 1 of 7</div>
+    <h2>Where are you?</h2>
+    <p class="step-hint">Your ZIP code powers local news, weather, politics, and high school sports.</p>
+    <input class="field" id="zip-input" type="tel" maxlength="5" placeholder="Enter your ZIP code" inputmode="numeric" />
+    <div class="field-confirm" id="zip-confirm"></div>
+    <div class="nav-row">
+      <button class="btn-next" id="zip-next" onclick="nextStep()" disabled>Continue →</button>
+    </div>
+  </div>
+
+  <!-- Step 2: Email -->
+  <div class="step" id="step-2">
+    <div class="step-eyebrow">Step 2 of 7</div>
+    <h2>Stay in sync</h2>
+    <p class="step-hint">Optional — we'll use this to save your preferences and let you sign in on any device.</p>
+    <input class="field" id="email-input" type="email" placeholder="your@email.com" />
+    <div class="nav-row">
+      <button class="btn-back" onclick="prevStep()">←</button>
+      <button class="btn-next" onclick="nextStep()">Continue →</button>
+    </div>
+    <div class="skip-link" onclick="skipEmail()">Skip — continue without email</div>
+  </div>
+
+  <!-- Step 3: Interests -->
+  <div class="step" id="step-3">
+    <div class="step-eyebrow">Step 3 of 7</div>
+    <h2>What do you care about?</h2>
+    <p class="step-hint">Pick topics and we'll surface relevant national news.</p>
+    <div class="chips" id="interests-chips"></div>
+    <div class="nav-row">
+      <button class="btn-back" onclick="prevStep()">←</button>
+      <button class="btn-next" onclick="nextStep()">Continue →</button>
+    </div>
+    <div class="skip-link" onclick="nextStep()">Skip this step</div>
+  </div>
+
+  <!-- Step 4: Sports -->
+  <div class="step" id="step-4">
+    <div class="step-eyebrow">Step 4 of 7</div>
+    <h2>Any teams?</h2>
+    <p class="step-hint">Pro, college, or any sport — we'll track them for you.</p>
+    <input class="field" id="teams-input" placeholder="e.g. Vikings, Twins, Coyotes" />
+    <div class="nav-row">
+      <button class="btn-back" onclick="prevStep()">←</button>
+      <button class="btn-next" onclick="nextStep()">Continue →</button>
+    </div>
+    <div class="skip-link" onclick="nextStep()">Skip — no teams</div>
+  </div>
+
+  <!-- Step 5: High school teams -->
+  <div class="step" id="step-5">
+    <div class="step-eyebrow">Step 5 of 7</div>
+    <h2>Local schools?</h2>
+    <p class="step-hint">We'll track scores and news for high schools near you.</p>
+    <div class="schools-list" id="schools-list"><div style="color:var(--muted);font-size:14px">Loading nearby schools…</div></div>
+    <div class="nav-row">
+      <button class="btn-back" onclick="prevStep()">←</button>
+      <button class="btn-next" onclick="nextStep()">Continue →</button>
+    </div>
+    <div class="skip-link" onclick="nextStep()">Skip — no schools</div>
+  </div>
+
+  <!-- Step 6: Stocks -->
+  <div class="step" id="step-6">
+    <div class="step-eyebrow">Step 6 of 7</div>
+    <h2>Any stocks to watch?</h2>
+    <p class="step-hint">Ticker symbols — we'll show live prices every morning.</p>
+    <input class="field" id="stocks-input" placeholder="e.g. AAPL TSLA SPY BTC" />
+    <div class="chips" id="default-stocks" style="margin-bottom:16px"></div>
+    <div class="nav-row">
+      <button class="btn-back" onclick="prevStep()">←</button>
+      <button class="btn-next" onclick="nextStep()">Continue →</button>
+    </div>
+    <div class="skip-link" onclick="nextStep()">Skip — no stocks</div>
+  </div>
+
+  <!-- Step 7: Preview -->
+  <div class="step" id="step-7">
+    <div class="step-eyebrow">Step 7 of 7</div>
+    <h2>Your briefing is ready</h2>
+    <p class="step-hint">Here's a live preview. It refreshes every morning.</p>
+
+    <div class="nav-row" style="margin-bottom:20px">
+      <button class="btn-back" onclick="prevStep()">←</button>
+      <button class="btn-next" id="finish-btn" onclick="finish()">Open my briefing →</button>
+    </div>
+
+    <div class="preview-section">
+      <div class="preview-label">Live preview</div>
+      <div id="briefing-preview">
+        <div style="color:var(--muted);text-align:center;padding:32px;font-size:14px">Loading your briefing…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Done -->
+  <div class="step" id="step-done">
+    <div class="done-state">
+      <div class="done-icon">✅</div>
+      <h2>You're all set!</h2>
+      <p>Your briefing is personalized and ready. Open it any time — it updates every morning.</p>
+      <button class="open-btn" onclick="openBriefing()">Open my briefing →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = 'https://advertising-connectivity-press-mph.trycloudflare.com';
+
+const INTERESTS = [
+  { label: '💼 Finance', value: 'finance' },
+  { label: '📊 Markets', value: 'markets' },
+  { label: '🏛 Politics', value: 'politics' },
+  { label: '🤖 AI / Tech', value: 'technology' },
+  { label: '🌍 World News', value: 'world news' },
+  { label: '🏃 Health', value: 'health' },
+  { label: '🎬 Entertainment', value: 'entertainment' },
+  { label: '🎮 Gaming', value: 'gaming' },
+  { label: '🔬 Science', value: 'science' },
+  { label: '📈 Crypto', value: 'crypto' },
+  { label: '🏠 Real Estate', value: 'real estate' },
+  { label: '⚽ Sports', value: 'sports' },
+  { label: '🌱 Climate', value: 'climate' },
+  { label: '🎨 Culture', value: 'culture' },
+  { label: '🧠 Philosophy', value: 'philosophy' },
+  { label: '💰 Personal Finance', value: 'personal finance' },
+];
+
+const DEFAULT_STOCKS = ['SPY','QQQ','BTC-USD','AAPL'];
+
+let step = 1;
+const totalSteps = 7;
+let state = {
+  zip: '', city: '', stateCode: '', lat: null, lng: null,
+  email: '', interests: [], sports_teams: [], hs_teams: [],
+  stocks: [...DEFAULT_STOCKS], token: '',
+};
+
+// ── Init ──
+document.addEventListener('DOMContentLoaded', () => {
+  buildInterestChips();
+  buildDefaultStockChips();
+  setupZipInput();
+  setupStocksInput();
+
+  // Check existing token
+  const tok = localStorage.getItem('briefing_token');
+  if (tok) {
+    document.getElementById('landing').style.display = 'none';
+    location.href = 'briefing.html?token=' + tok;
+  }
+});
+
+// ── Landing actions ──
+function startOnboarding() {
+  document.getElementById('landing').style.display = 'none';
+  document.getElementById('onboarding').style.display = 'block';
+}
+function tryDemo() {
+  location.href = 'briefing.html?token=1aac8456-582b-4fd0-87c7-d0ce1d8c59e1';
+}
+
+// ── Step navigation ──
+function updateProgress() {
+  const pct = (step / totalSteps) * 100;
+  document.getElementById('progress-bar').style.width = pct + '%';
+}
+function showStep(n) {
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById('step-' + (n === 'done' ? 'done' : n));
+  if (el) el.classList.add('active');
+}
+async function nextStep() {
+  if (step === 5) loadSchools(); // preload for next visit
+  if (step === 7) { await finish(); return; }
+  if (step < totalSteps) { step++; showStep(step); updateProgress(); }
+  if (step === 5) await loadSchools();
+  if (step === 7) await loadPreview();
+}
+function prevStep() {
+  if (step > 1) { step--; showStep(step); updateProgress(); }
+}
+function skipEmail() {
+  state.email = 'anon_' + Date.now() + '@briefing.local';
+  step++; showStep(step); updateProgress();
+}
+
+// ── ZIP ──
+function setupZipInput() {
+  const inp = document.getElementById('zip-input');
+  inp.addEventListener('input', () => {
+    const val = inp.value.replace(/\D/g,'').slice(0,5);
+    inp.value = val;
+    if (val.length === 5) validateZip(val);
+    else { document.getElementById('zip-confirm').textContent = ''; document.getElementById('zip-next').disabled = true; }
+  });
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !document.getElementById('zip-next').disabled) nextStep(); });
+}
+async function validateZip(zip) {
+  const el = document.getElementById('zip-confirm');
+  el.textContent = 'Checking…';
+  el.className = 'field-confirm';
+  try {
+    const res = await fetch(`${API}/api/geo/zip/${zip}`);
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    state.zip = zip; state.city = data.city; state.stateCode = data.state;
+    state.lat = data.lat; state.lng = data.lng;
+    el.textContent = `✓ ${data.city}, ${data.state}`;
+    el.className = 'field-confirm';
+    document.getElementById('zip-next').disabled = false;
+  } catch {
+    el.textContent = 'ZIP not found — try another';
+    el.className = 'field-error';
+    document.getElementById('zip-next').disabled = true;
+  }
+}
+
+// ── Interests ──
+function buildInterestChips() {
+  const wrap = document.getElementById('interests-chips');
+  INTERESTS.forEach(({ label, value }) => {
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.textContent = label;
+    chip.onclick = () => {
+      chip.classList.toggle('on');
+      if (chip.classList.contains('on')) state.interests.push(value);
+      else state.interests = state.interests.filter(v => v !== value);
+    };
+    wrap.appendChild(chip);
+  });
+}
+
+// ── Schools ──
+async function loadSchools() {
+  if (!state.city) return;
+  const list = document.getElementById('schools-list');
+  list.innerHTML = '<div style="color:var(--muted);font-size:14px">Loading…</div>';
+  try {
+    const res  = await fetch(`${API}/api/geo/schools/${encodeURIComponent(state.city)}`);
+    const data = await res.json();
+    const schools = data.schools || [];
+    if (!schools.length) { list.innerHTML = '<div style="color:var(--muted);font-size:14px">No schools found nearby.</div>'; return; }
+    list.innerHTML = '';
+    schools.forEach(s => {
+      const chip = document.createElement('div');
+      chip.className = 'school-chip';
+      chip.innerHTML = `<div>
+        <div class="school-chip-name">${s.name}</div>
+        <div class="school-chip-meta">${s.mascot ? s.mascot + ' · ' : ''}${s.classification}</div>
+      </div>`;
+      chip.onclick = () => {
+        chip.classList.toggle('on');
+        if (chip.classList.contains('on')) state.hs_teams.push(s.name);
+        else state.hs_teams = state.hs_teams.filter(n => n !== s.name);
+      };
+      list.appendChild(chip);
+    });
+  } catch { list.innerHTML = '<div style="color:var(--muted);font-size:14px">Couldn\'t load schools.</div>'; }
+}
+
+// ── Stocks ──
+function buildDefaultStockChips() {
+  const wrap = document.getElementById('default-stocks');
+  DEFAULT_STOCKS.forEach(sym => {
+    const chip = document.createElement('div');
+    chip.className = 'chip on';
+    chip.textContent = sym;
+    chip.onclick = () => {
+      chip.classList.toggle('on');
+      if (chip.classList.contains('on')) { if (!state.stocks.includes(sym)) state.stocks.push(sym); }
+      else state.stocks = state.stocks.filter(s => s !== sym);
+    };
+    wrap.appendChild(chip);
+  });
+}
+function setupStocksInput() {
+  const inp = document.getElementById('stocks-input');
+  inp.addEventListener('keydown', e => {
+    if (e.key === ' ' || e.key === ',') {
+      e.preventDefault();
+      const sym = inp.value.trim().toUpperCase().replace(/[^A-Z0-9\-]/g,'');
+      if (sym && !state.stocks.includes(sym)) state.stocks.push(sym);
+      inp.value = '';
+    }
+  });
+}
+
+// ── Preview ──
+async function loadPreview() {
+  const prev = document.getElementById('briefing-preview');
+  prev.innerHTML = '<div style="color:var(--muted);text-align:center;padding:32px;font-size:14px">Loading your briefing…</div>';
+
+  // Collect extras from fields
+  const teamsVal = document.getElementById('teams-input').value.trim();
+  if (teamsVal) state.sports_teams = teamsVal.split(',').map(s => s.trim()).filter(Boolean);
+  const stocksVal = document.getElementById('stocks-input').value.trim().toUpperCase();
+  if (stocksVal) { stocksVal.split(/[\s,]+/).forEach(s => { if (s && !state.stocks.includes(s)) state.stocks.push(s); }); }
+
+  try {
+    // Create/get token
+    const tok = localStorage.getItem('briefing_token');
+    if (!tok) {
+      const email = document.getElementById('email-input').value.trim() || state.email || `anon_${Date.now()}@briefing.local`;
+      state.email = email;
+      const res = await fetch(`${API}/api/users/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: state.email,
+          zip_code: state.zip,
+          interests: state.interests,
+          sports_teams: state.sports_teams,
+          hs_teams: state.hs_teams,
+          stocks: state.stocks,
+        }),
+      });
+      const data = await res.json();
+      if (data.token) { state.token = data.token; localStorage.setItem('briefing_token', data.token); }
+    } else {
+      state.token = tok;
+      // Update profile with latest selections
+      await fetch(`${API}/api/users/${tok}/profile`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ interests: state.interests, sports_teams: state.sports_teams, hs_teams: state.hs_teams, stocks: state.stocks }),
+      });
+    }
+
+    const bRes = await fetch(`${API}/api/users/${state.token}/briefing`);
+    if (!bRes.ok) throw new Error();
+    const briefing = await bRes.json();
+    renderPreview(briefing, prev);
+  } catch (e) {
+    prev.innerHTML = '<div style="color:var(--red);text-align:center;padding:24px;font-size:14px">Couldn\'t load preview. Continue anyway →</div>';
+  }
+}
+
+function renderPreview(briefing, el) {
+  const s = briefing.sections;
+  let html = '';
+
+  // Weather
+  if (s.weather?.current) {
+    const c = s.weather.current;
+    const icon = wIcon(c.shortForecast);
+    html += `<div class="prev-section">
+      <div class="prev-title">🌤 Weather — ${briefing.user?.location || ''}</div>
+      <div class="prev-weather-main">
+        <div>
+          <div class="prev-temp">${c.temperature}<span class="prev-temp-unit">°${c.temperatureUnit}</span></div>
+          <div class="prev-w-name">${c.shortForecast}</div>
+        </div>
+        <div class="prev-w-icon">${icon}</div>
+      </div>
+      ${c.action ? `<div class="prev-action">${c.action}</div>` : ''}
+      <div class="forecast-toggle-row" onclick="togglePrevForecast(this)">
+        <span>7-day forecast</span><span>↓</span>
+      </div>
+      <div class="prev-forecast">
+        ${(s.weather.periods||[]).map(p=>`
+          <div class="prev-fc-row">
+            <span class="prev-fc-day">${p.name}</span>
+            <span class="prev-fc-icon">${wIcon(p.shortForecast)}</span>
+            <span class="prev-fc-desc">${p.shortForecast}</span>
+            <span class="prev-fc-temp">${p.temperature}°${p.temperatureUnit}</span>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  // Markets
+  if (s.markets?.length) {
+    html += `<div class="prev-section"><div class="prev-title">📈 Markets</div>
+      <div class="prev-mkt-grid">`;
+    s.markets.forEach(m => {
+      const pct = m.change_pct || 0;
+      const cls = pct >= 0 ? 'up' : 'down';
+      const arr = pct >= 0 ? '▲' : '▼';
+      const sym = m.symbol.replace('-USD','').replace('^','');
+      const price = sym === 'BTC' || sym === 'ETH'
+        ? '$' + Number(m.price).toLocaleString('en-US',{maximumFractionDigits:0})
+        : m.symbol.startsWith('^') ? Number(m.price).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
+        : '$' + Number(m.price).toFixed(2);
+      html += `<div class="prev-mkt">
+        <div class="prev-mkt-sym">${sym}</div>
+        <div class="prev-mkt-price">${price}</div>
+        <div class="prev-mkt-chg ${cls}">${arr} ${Math.abs(pct).toFixed(2)}%</div>
+      </div>`;
+    });
+    html += `</div></div>`;
+  }
+
+  // Local news
+  if (s.local_news?.length) {
+    html += `<div class="prev-section"><div class="prev-title">📍 Local</div><div class="prev-news">`;
+    s.local_news.slice(0,4).forEach((n,i) => {
+      html += `<div class="prev-news-item" onclick="window.open('${(n.url||'').replace(/'/g,"\\'")}','_blank')">
+        <span class="prev-news-num">${i+1}</span>
+        <div><div class="prev-news-title">${n.title}</div><div class="prev-news-src">${n.source||''}</div></div>
+      </div>`;
+    });
+    html += `</div></div>`;
+  }
+
+  // Reps
+  if (s.politics?.federal_reps?.length) {
+    html += `<div class="prev-section"><div class="prev-title">🏛 Your Reps</div>`;
+    if (s.politics.governor) {
+      html += `<div style="font-size:13px;color:var(--t2);margin-bottom:6px">Governor: <strong style="color:var(--text)">${s.politics.governor.name}</strong></div>`;
+    }
+    s.politics.federal_reps.forEach(r => {
+      html += `<div style="font-size:13px;color:var(--t2);margin-bottom:4px">${r.chamber}: <strong style="color:var(--text)">${r.name}</strong> (${r.party})</div>`;
+    });
+    html += `</div>`;
+  }
+
+  el.innerHTML = html || '<div style="color:var(--muted);text-align:center;padding:20px;font-size:14px">Your briefing is ready.</div>';
+}
+
+function togglePrevForecast(btn) {
+  const fc = btn.nextElementSibling;
+  fc.classList.toggle('open');
+  btn.lastElementChild.textContent = fc.classList.contains('open') ? '↑' : '↓';
+}
+
+function wIcon(f) {
+  const s = (f||'').toLowerCase();
+  if (s.includes('snow') || s.includes('sleet'))   return '❄️';
+  if (s.includes('thunder') || s.includes('storm')) return '⛈️';
+  if (s.includes('rain') || s.includes('shower'))   return '🌧️';
+  if (s.includes('fog'))                             return '🌫️';
+  if (s.includes('overcast'))                        return '☁️';
+  if (s.includes('cloud'))                           return '⛅';
+  if (s.includes('wind'))                            return '💨';
+  if (s.includes('clear') || s.includes('sunny'))    return '☀️';
+  return '🌤️';
+}
+
+// ── Finish ──
+async function finish() {
+  openBriefing();
+}
+function openBriefing() {
+  const token = state.token || localStorage.getItem('briefing_token');
+  if (token) {
+    location.href = `briefing.html?token=${encodeURIComponent(token)}`;
+  } else {
+    location.href = 'briefing.html';
+  }
+}
+</script>
+</body>
+</html>

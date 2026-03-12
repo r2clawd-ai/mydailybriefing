@@ -1,0 +1,53 @@
+{
+  "city_id": "philadelphia",
+  "name": "Philadelphia",
+  "state": "PA",
+  "timezone": "America/New_York",
+  "coordinates": {
+    "lat": 39.9526,
+    "lon": -75.1652
+  },
+  "population": 1600000,
+  "theme": {
+    "primary_color": "#003087",
+    "secondary_color": "#C60C30",
+    "icon": "🔔"
+  },
+  "data_sources": {
+    "weather": {
+      "provider": "nws",
+      "grid": {
+        "office": "PHI",
+        "gridX": 49,
+        "gridY": 75
+      }
+    },
+    "news": {
+      "local_rss": [
+        "https://www.inquirer.com/arc/outboundfeeds/rss/"
+      ],
+      "twitter_accounts": [
+        "@PhillyInquirer",
+        "@PhillyMayor"
+      ]
+    },
+    "traffic": {
+      "provider": "google_maps",
+      "transit_agencies": ["SEPTA"]
+    },
+    "sports": {
+      "teams": [
+        {"name": "Phillies", "league": "MLB", "sport": "baseball"},
+        {"name": "76ers", "league": "NBA", "sport": "basketball"},
+        {"name": "Flyers", "league": "NHL", "sport": "hockey"},
+        {"name": "Eagles", "league": "NFL", "sport": "football"}
+      ]
+    }
+  },
+  "features": {
+    "traffic_enabled": true,
+    "transit_enabled": true,
+    "sports_enabled": true,
+    "events_enabled": true
+  }
+}

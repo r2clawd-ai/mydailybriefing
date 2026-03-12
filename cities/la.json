@@ -1,0 +1,58 @@
+{
+  "city_id": "la",
+  "name": "Los Angeles",
+  "state": "CA",
+  "timezone": "America/Los_Angeles",
+  "coordinates": {
+    "lat": 34.0522,
+    "lon": -118.2437
+  },
+  "population": 3900000,
+  "theme": {
+    "primary_color": "#FFD700",
+    "secondary_color": "#4169E1",
+    "icon": "🌴"
+  },
+  "data_sources": {
+    "weather": {
+      "provider": "nws",
+      "grid": {
+        "office": "LOX",
+        "gridX": 154,
+        "gridY": 44
+      }
+    },
+    "news": {
+      "local_rss": [
+        "https://www.latimes.com/local/rss2.0.xml",
+        "https://laist.com/feed"
+      ],
+      "twitter_accounts": [
+        "@latimes",
+        "@LAist",
+        "@MayorOfLA"
+      ]
+    },
+    "traffic": {
+      "provider": "google_maps",
+      "transit_agencies": ["LA Metro"]
+    },
+    "sports": {
+      "teams": [
+        {"name": "Dodgers", "league": "MLB", "sport": "baseball"},
+        {"name": "Angels", "league": "MLB", "sport": "baseball"},
+        {"name": "Lakers", "league": "NBA", "sport": "basketball"},
+        {"name": "Clippers", "league": "NBA", "sport": "basketball"},
+        {"name": "Kings", "league": "NHL", "sport": "hockey"},
+        {"name": "Rams", "league": "NFL", "sport": "football"},
+        {"name": "Chargers", "league": "NFL", "sport": "football"}
+      ]
+    }
+  },
+  "features": {
+    "traffic_enabled": true,
+    "transit_enabled": true,
+    "sports_enabled": true,
+    "events_enabled": true
+  }
+}

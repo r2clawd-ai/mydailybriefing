@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0d0d" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="description" content="Your personalized morning briefing — local news, weather, markets, politics, and more. Everything that matters, under 2 minutes." />
+  <link rel="manifest" href="/manifest.json" />
+  <title>My Daily Briefing</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:      #0d0d0d;
+      --surface: #141414;
+      --s2:      #1a1a1a;
+      --s3:      #202020;
+      --border:  #222222;
+      --b2:      #2c2c2c;
+      --accent:  #f0c040;
+      --red:     #e05050;
+      --green:   #4db86a;
+      --blue:    #4a9eff;
+      --teal:    #4ecdc4;
+      --orange:  #e07020;
+      --text:    #f0f0f0;
+      --t2:      #a8a8a8;
+      --muted:   #5a5a5a;
+      --r:       14px;
+      --t:       0.16s ease;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bot: env(safe-area-inset-bottom, 0px);
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+      font-size: 15px;
+      line-height: 1.55;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    /* ─── Loading screen ─── */
+    #loading-screen {
+      position: fixed; inset: 0; z-index: 200;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      transition: opacity .4s ease;
+    }
+    #loading-screen.gone { opacity: 0; pointer-events: none; }
+    .load-logo { font-size: 48px; animation: float 2s ease-in-out infinite; }
+    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+    .load-label { font-size: 13px; color: var(--t2); letter-spacing: .04em; }
+    .load-bar-wrap { width: 160px; height: 2px; background: var(--border); border-radius: 2px; overflow: hidden; }
+    .load-bar { height: 2px; background: var(--accent); border-radius: 2px; width: 0; transition: width .3s ease; }
+
+    /* ─── Sticky topbar ─── */
+    .topbar {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(13,13,13,.94);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      border-bottom: 1px solid var(--border);
+      padding: calc(var(--safe-top) + 10px) 16px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo { font-size: 17px; font-weight: 800; letter-spacing: -.2px; display: flex; align-items: center; gap: 6px; }
+    .logo-dot { color: var(--accent); }
+    .loc-pill {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--s2);
+      border: 1px solid var(--b2);
+      border-radius: 100px;
+      padding: 4px 10px;
+      font-size: 12px;
+      color: var(--t2);
+      cursor: pointer;
+      transition: border-color var(--t);
+      max-width: 140px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .loc-pill:hover { border-color: var(--accent); color: var(--accent); }
+    .topbar-right { display: flex; gap: 8px; }
+    .icon-btn {
+      width: 34px; height: 34px; border-radius: 50%;
+      background: var(--s2); border: 1px solid var(--b2);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 16px;
+      transition: background var(--t), border-color var(--t);
+    }
+    .icon-btn:hover { background: var(--s3); border-color: var(--b2); }
+    .icon-btn.spinning { animation: spin .6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── Section pill nav ─── */
+    .section-nav-wrap {
+      background: rgba(13,13,13,.94);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .section-nav {
+      display: flex; gap: 4px;
+      overflow-x: auto;
+      padding: 10px 12px;
+      scrollbar-width: none;
+    }
+    .section-nav::-webkit-scrollbar { display: none; }
+    .nav-pill {
+      flex-shrink: 0;
+      padding: 5px 13px;
+      border-radius: 100px;
+      border: 1px solid var(--b2);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--t2);
+      cursor: pointer;
+      transition: all var(--t);
+      white-space: nowrap;
+    }
+    .nav-pill:hover  { color: var(--text); border-color: var(--b2); }
+    .nav-pill.active { background: var(--accent); color: #111; border-color: var(--accent); font-weight: 700; }
+
+    /* ─── Page layout ─── */
+    .page { max-width: 680px; margin: 0 auto; padding: 0 14px calc(var(--safe-bot) + 80px); }
+
+    /* ─── Date header ─── */
+    .date-header {
+      padding: 22px 2px 18px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 4px;
+    }
+    .date-str { font-size: 11px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
+    .greeting-str { font-size: 24px; font-weight: 800; letter-spacing: -.4px; margin-top: 4px; }
+
+    /* ─── Sections ─── */
+    .section { margin-top: 26px; }
+    .sec-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 14px;
+    }
+    .sec-title  { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; font-weight: 700; color: var(--accent); }
+    .sec-meta   { font-size: 11px; color: var(--muted); }
+    .sub-label  { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 12px 0 8px; }
+
+    /* ─── Weather ─── */
+    .weather-card {
+      background: linear-gradient(145deg, var(--surface) 0%, var(--s2) 100%);
+      border: 1px solid var(--b2);
+      border-radius: var(--r);
+      padding: 20px;
+      cursor: pointer;
+    }
+    .weather-card:active { opacity: .95; }
+    .w-main { display: flex; justify-content: space-between; align-items: flex-start; }
+    .w-temp  { font-size: 56px; font-weight: 800; letter-spacing: -3px; line-height: 1; }
+    .w-unit  { font-size: 24px; font-weight: 400; color: var(--muted); vertical-align: super; font-size: 20px; }
+    .w-icon  { font-size: 52px; filter: drop-shadow(0 2px 8px rgba(0,0,0,.4)); }
+    .w-name  { font-size: 14px; font-weight: 600; color: var(--t2); margin-top: 6px; }
+    .w-desc  { font-size: 13px; color: var(--muted); margin-top: 2px; }
+    .action-box {
+      background: rgba(240,192,64,.08);
+      border: 1px solid rgba(240,192,64,.2);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--accent);
+      line-height: 1.5;
+      margin-top: 14px;
+    }
+    .fc-toggle {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: var(--muted);
+      margin-top: 14px; cursor: pointer;
+      user-select: none;
+    }
+    .fc-toggle-icon { transition: transform var(--t); display: inline-block; }
+    .fc-toggle-icon.open { transform: rotate(180deg); }
+    .forecast { display: none; flex-direction: column; gap: 0; margin-top: 12px; border-top: 1px solid var(--border); padding-top: 12px; }
+    .forecast.open { display: flex; }
+    .fc-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .fc-row:last-child { border-bottom: none; }
+    .fc-day  { width: 80px; color: var(--t2); font-weight: 500; }
+    .fc-icon { width: 22px; text-align: center; font-size: 16px; }
+    .fc-desc { flex: 1; color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .fc-temp { font-weight: 700; white-space: nowrap; }
+
+    /* ─── Markets ─── */
+    .mkt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+    .mkt-card {
+      background: var(--surface);
+      border: 1px solid var(--b2);
+      border-radius: 12px;
+      padding: 14px;
+      transition: transform var(--t), border-color var(--t);
+      cursor: default;
+    }
+    .mkt-card:hover { transform: translateY(-2px); }
+    .mkt-sym   { font-size: 10px; font-weight: 700; letter-spacing: .08em; color: var(--muted); }
+    .mkt-price { font-size: 19px; font-weight: 800; letter-spacing: -.5px; margin-top: 4px; }
+    .mkt-chg   { font-size: 12px; font-weight: 600; margin-top: 4px; display: flex; align-items: center; gap: 3px; }
+    .up   { color: var(--green); }
+    .down { color: var(--red); }
+
+    /* ─── News cards ─── */
+    .news-stack { display: flex; flex-direction: column; gap: 8px; }
+
+    /* Standard news card */
+    .news-card {
+      background: var(--surface);
+      border: 1px solid var(--b2);
+      border-radius: 12px;
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: background var(--t), border-color var(--t);
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .news-card:hover { background: var(--s2); }
+    .news-card-body { flex: 1; min-width: 0; }
+    .badge {
+      display: inline-flex; align-items: center;
+      padding: 2px 8px; border-radius: 100px;
+      font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .05em;
+      margin-bottom: 6px;
+    }
+    .news-title  { font-size: 14px; font-weight: 600; line-height: 1.45; }
+    .news-meta   { display: flex; gap: 8px; align-items: center; margin-top: 6px; font-size: 11px; color: var(--muted); }
+    .news-source { color: var(--t2); font-weight: 500; }
+    .news-chevron { color: var(--muted); font-size: 20px; flex-shrink: 0; align-self: center; }
+
+    /* Featured (top local story) */
+    .news-featured {
+      background: var(--surface);
+      border: 1px solid var(--b2);
+      border-radius: var(--r);
+      padding: 18px;
+      cursor: pointer;
+      transition: background var(--t);
+      margin-bottom: 8px;
+    }
+    .news-featured:hover { background: var(--s2); }
+    .featured-title { font-size: 17px; font-weight: 700; line-height: 1.4; margin-bottom: 8px; }
+    .featured-meta  { font-size: 11px; color: var(--muted); display: flex; gap: 8px; }
+    .featured-source{ color: var(--t2); font-weight: 500; }
+
+    /* ─── Alerts ─── */
+    .alert-card {
+      background: rgba(224,80,80,.06);
+      border: 1px solid rgba(224,80,80,.22);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 8px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+    .alert-icon  { font-size: 20px; flex-shrink: 0; }
+    .alert-title { font-size: 14px; font-weight: 700; color: var(--red); line-height: 1.4; }
+    .alert-meta  { font-size: 12px; color: var(--muted); margin-top: 3px; }
+
+    /* ─── Rep cards ─── */
+    .rep-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
+    .rep-card {
+      background: var(--surface);
+      border: 1px solid var(--b2);
+      border-radius: 12px;
+      padding: 14px;
+    }
+    .rep-role  { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+    .rep-name  { font-size: 14px; font-weight: 700; line-height: 1.3; margin-top: 4px; }
+    .rep-party { font-size: 12px; margin-top: 5px; }
+    .party-r   { color: #e06060; }
+    .party-d   { color: var(--blue); }
+
+    /* ─── Accounts ─── */
+    .account-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+    .acct-chip {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 14px;
+      background: var(--surface);
+      border: 1px solid var(--b2);
+      border-radius: 100px;
+      font-size: 13px; font-weight: 500;
+      cursor: pointer;
+      transition: border-color var(--t), color var(--t);
+      text-decoration: none;
+      color: var(--text);
+    }
+    .acct-chip:hover { border-color: var(--accent); color: var(--accent); }
+    .acct-sub { font-size: 10px; color: var(--muted); }
+
+    /* ─── Schools ─── */
+    .school-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+    .school-card {
+      background: var(--surface);
+      border: 1px solid var(--b2);
+      border-radius: 10px;
+      padding: 12px;
+    }
+    .school-name { font-size: 13px; font-weight: 600; }
+    .school-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    /* ─── Bottom tab bar ─── */
+    .tabbar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: rgba(13,13,13,.96);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-top: 1px solid var(--border);
+      display: flex;
+      padding: 6px 0 calc(var(--safe-bot) + 6px);
+      z-index: 90;
+    }
+    .tab {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      gap: 2px; padding: 4px 0; cursor: pointer; color: var(--muted); font-size: 10px;
+      transition: color var(--t);
+    }
+    .tab.active { color: var(--accent); }
+    .tab-icon   { font-size: 20px; line-height: 1; }
+
+    /* ─── Settings sheet ─── */
+    .sheet-bg { position: fixed; inset: 0; z-index: 150; background: rgba(0,0,0,.55); backdrop-filter: blur(4px); display: none; align-items: flex-end; }
+    .sheet-bg.open { display: flex; }
+    .sheet {
+      width: 100%; max-width: 680px; margin: 0 auto;
+      background: var(--s2);
+      border-radius: 20px 20px 0 0;
+      border: 1px solid var(--b2);
+      padding: 16px 20px calc(var(--safe-bot) + 24px);
+      transform: translateY(100%);
+      transition: transform .28s cubic-bezier(.4,0,.2,1);
+    }
+    .sheet-bg.open .sheet { transform: translateY(0); }
+    .sheet-handle { width: 36px; height: 4px; background: var(--b2); border-radius: 2px; margin: 0 auto 18px; }
+    .sheet-title  { font-size: 17px; font-weight: 700; margin-bottom: 18px; }
+    .sheet-row { display: flex; align-items: center; justify-content: space-between; padding: 13px 0; border-bottom: 1px solid var(--border); font-size: 15px; }
+    .sheet-row:last-child { border-bottom: none; }
+    .sheet-label { color: var(--t2); }
+    .sheet-val   { font-weight: 600; color: var(--accent); font-size: 14px; max-width: 200px; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ─── Add to home banner ─── */
+    .a2hs-banner {
+      position: fixed; bottom: 70px; left: 12px; right: 12px; z-index: 80;
+      background: var(--s2);
+      border: 1px solid var(--accent);
+      border-radius: 14px;
+      padding: 14px 16px;
+      display: none;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.5);
+    }
+    .a2hs-banner.show { display: flex; }
+    .a2hs-text { font-size: 13px; line-height: 1.4; flex: 1; }
+    .a2hs-text strong { color: var(--accent); font-size: 14px; }
+    .a2hs-btns { display: flex; gap: 8px; flex-shrink: 0; }
+    .a2hs-add  { background: var(--accent); color: #111; font-weight: 700; font-size: 13px; padding: 8px 16px; border-radius: 100px; border: none; cursor: pointer; }
+    .a2hs-dismiss { color: var(--muted); font-size: 13px; cursor: pointer; padding: 8px; }
+
+    /* ─── Share toast ─── */
+    .toast {
+      position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: var(--s3);
+      border: 1px solid var(--b2);
+      border-radius: 100px;
+      padding: 10px 20px;
+      font-size: 13px;
+      color: var(--text);
+      opacity: 0;
+      transition: all .3s ease;
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 200;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ─── Empty / error ─── */
+    .empty { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; }
+    .err-btn { display: inline-block; margin-top: 16px; background: var(--accent); color: #111; font-weight: 700; font-size: 14px; padding: 10px 24px; border-radius: 100px; cursor: pointer; border: none; }
+  </style>
+</head>
+<body>
+
+<!-- Loading screen -->
+<div id="loading-screen">
+  <div class="load-logo">☀️</div>
+  <div class="load-bar-wrap"><div class="load-bar" id="load-bar"></div></div>
+  <div class="load-label" id="load-label">Loading your briefing…</div>
+</div>
+
+<!-- Topbar -->
+<div class="topbar">
+  <div class="logo">MY<span class="logo-dot">.</span>BRIEFING</div>
+  <div class="loc-pill" onclick="openSettings()">📍 <span id="loc-text">…</span></div>
+  <div class="topbar-right">
+    <div class="icon-btn" id="share-btn" onclick="share()" title="Share">⬆</div>
+    <div class="icon-btn" id="refresh-btn" onclick="loadBriefing(true)" title="Refresh">↻</div>
+  </div>
+</div>
+
+<!-- Section nav -->
+<div class="section-nav-wrap">
+  <div class="section-nav" id="section-nav">
+    <div class="nav-pill active" data-target="sec-weather">⛅ Weather</div>
+    <div class="nav-pill" data-target="sec-markets">📈 Markets</div>
+    <div class="nav-pill" data-target="sec-local">📍 Local</div>
+    <div class="nav-pill" data-target="sec-national">📰 National</div>
+    <div class="nav-pill" data-target="sec-politics">🏛 Politics</div>
+    <div class="nav-pill" data-target="sec-sports">🏆 Sports</div>
+    <div class="nav-pill" data-target="sec-community">🏙 Community</div>
+    <div class="nav-pill" data-target="sec-follow">👤 Follow</div>
+  </div>
+</div>
+
+<!-- Main page -->
+<div class="page">
+  <div class="date-header">
+    <div class="date-str" id="date-str"></div>
+    <div class="greeting-str" id="greeting-str"></div>
+  </div>
+
+  <div id="content"></div>
+</div>
+
+<!-- Tab bar -->
+<div class="tabbar">
+  <div class="tab active"><div class="tab-icon">☀️</div>Today</div>
+  <div class="tab" onclick="openSettings()"><div class="tab-icon">⚙️</div>Settings</div>
+</div>
+
+<!-- Settings sheet -->
+<div class="sheet-bg" id="sheet-bg" onclick="handleSheetBg(event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Your Briefing</div>
+    <div class="sheet-row"><span class="sheet-label">Location</span><span class="sheet-val" id="s-loc">—</span></div>
+    <div class="sheet-row"><span class="sheet-label">ZIP Code</span><span class="sheet-val" id="s-zip">—</span></div>
+    <div class="sheet-row"><span class="sheet-label">Interests</span><span class="sheet-val" id="s-int">—</span></div>
+    <div class="sheet-row"><span class="sheet-label">Stocks</span><span class="sheet-val" id="s-stk">—</span></div>
+    <div class="sheet-row" onclick="editPrefs()"><span style="color:var(--accent);cursor:pointer">Edit preferences</span><span>›</span></div>
+    <div class="sheet-row" onclick="signOut()"><span style="color:var(--red);cursor:pointer">Sign out</span><span></span></div>
+  </div>
+</div>
+
+<!-- A2HS banner -->
+<div class="a2hs-banner" id="a2hs-banner">
+  <div class="a2hs-text"><strong>Add to Home Screen</strong><br>Open your briefing like an app — no App Store needed.</div>
+  <div class="a2hs-btns">
+    <button class="a2hs-add" onclick="a2hsAdd()">Add</button>
+    <span class="a2hs-dismiss" onclick="a2hsClose()">✕</span>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+const API = 'https://advertising-connectivity-press-mph.trycloudflare.com';
+
+let briefingData = null;
+let profile      = null;
+let a2hsPrompt   = null;
+
+// ── PWA a2hs ──────────────────────────────────────────────────────
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  a2hsPrompt = e;
+  if (!localStorage.getItem('a2hs_dismissed')) {
+    setTimeout(() => document.getElementById('a2hs-banner').classList.add('show'), 3000);
+  }
+});
+function a2hsAdd() {
+  if (a2hsPrompt) { a2hsPrompt.prompt(); a2hsPrompt.userChoice.then(() => a2hsClose()); }
+  else {
+    // iOS instructions
+    showToast('On iPhone: tap the Share icon ⬆ then "Add to Home Screen"');
+    a2hsClose();
+  }
+}
+function a2hsClose() {
+  document.getElementById('a2hs-banner').classList.remove('show');
+  localStorage.setItem('a2hs_dismissed', '1');
+}
+
+// Register service worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+
+// ── Init ──────────────────────────────────────────────────────────
+async function init() {
+  const params   = new URLSearchParams(location.search);
+  const urlToken = params.get('token');
+  if (urlToken) { localStorage.setItem('briefing_token', urlToken); history.replaceState({}, '', location.pathname); }
+
+  const token = localStorage.getItem('briefing_token');
+  if (!token) { location.href = 'index.html'; return; }
+
+  setDateMasthead();
+  await loadBriefing();
+  initSectionNav();
+}
+
+function setDateMasthead() {
+  const now = new Date();
+  const h   = now.getHours();
+  const gr  = h < 5 ? 'Good night' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  const days= ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const mon = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('date-str').textContent    = `${days[now.getDay()]}, ${mon[now.getMonth()]} ${now.getDate()}`;
+  document.getElementById('greeting-str').textContent = gr;
+}
+
+// ── Load ──────────────────────────────────────────────────────────
+async function loadBriefing(refresh = false) {
+  const token = localStorage.getItem('briefing_token');
+  const bar   = document.getElementById('load-bar');
+  const label = document.getElementById('load-label');
+  const rbtn  = document.getElementById('refresh-btn');
+  if (refresh) rbtn.classList.add('spinning');
+
+  // Animate loading bar
+  let pct = 0;
+  const tick = setInterval(() => { pct = Math.min(pct + 8, 85); bar.style.width = pct + '%'; }, 200);
+
+  try {
+    // Parallel: profile + briefing
+    label && (label.textContent = 'Fetching your data…');
+    const [pRes, bRes] = await Promise.all([
+      fetch(`${API}/api/users/${token}/profile`),
+      fetch(`${API}/api/users/${token}/briefing`),
+    ]);
+
+    if (pRes.ok) {
+      profile = await pRes.json();
+      const loc = profile.city ? `${profile.city}, ${profile.state}` : 'Your location';
+      document.getElementById('loc-text').textContent = loc;
+      document.getElementById('s-loc').textContent = loc;
+      document.getElementById('s-zip').textContent = profile.zip_code || '—';
+      document.getElementById('s-int').textContent = (profile.interests || []).slice(0,3).join(', ') || '—';
+      document.getElementById('s-stk').textContent = (profile.stocks || []).slice(0,4).join(', ') || '—';
+    }
+
+    if (!bRes.ok) throw new Error('Briefing failed');
+    briefingData = await bRes.json();
+
+    clearInterval(tick); bar.style.width = '100%';
+    label && (label.textContent = 'Ready!');
+    setTimeout(() => {
+      document.getElementById('loading-screen').classList.add('gone');
+      setTimeout(() => document.getElementById('loading-screen').style.display = 'none', 400);
+    }, 300);
+
+    render(briefingData);
+  } catch (e) {
+    clearInterval(tick);
+    document.getElementById('loading-screen').style.display = 'none';
+    document.getElementById('content').innerHTML = `
+      <div class="empty">
+        <div style="font-size:32px;margin-bottom:12px">⚠️</div>
+        <div>Couldn't load your briefing.</div>
+        <button class="err-btn" onclick="loadBriefing(true)">Try again</button>
+      </div>`;
+  } finally {
+    rbtn.classList.remove('spinning');
+  }
+}
+
+// ── Render ────────────────────────────────────────────────────────
+function render(data) {
+  const s   = data.sections;
+  const loc = data.user?.location || (profile?.city ? `${profile.city}, ${profile.state}` : '');
+  let   h   = '';
+
+  // ── Weather + alerts ──
+  const w = s.weather;
+  if (w?.current) {
+    const c    = w.current;
+    const icon = wIcon(c.shortForecast);
+    const alerts = s.hyper_local?.alerts || [];
+    h += `<div class="section" id="sec-weather">
+      <div class="sec-header"><span class="sec-title">⛅ Weather</span><span class="sec-meta">${loc}</span></div>
+      ${alerts.map(a => `
+        <div class="alert-card">
+          <div class="alert-icon">⚠️</div>
+          <div>
+            <div class="alert-title">${a.title}</div>
+            <div class="alert-meta">Severity: ${a.severity}</div>
+          </div>
+        </div>`).join('')}
+      <div class="weather-card" onclick="toggleFc(this)">
+        <div class="w-main">
+          <div>
+            <div class="w-temp">${c.temperature}<span class="w-unit">°${c.temperatureUnit}</span></div>
+            <div class="w-name">${c.name}</div>
+            <div class="w-desc">${c.shortForecast}</div>
+          </div>
+          <div class="w-icon">${icon}</div>
+        </div>
+        ${c.action ? `<div class="action-box">${c.action}</div>` : ''}
+        <div class="fc-toggle">
+          <span>7-day forecast</span>
+          <span class="fc-toggle-icon">↓</span>
+        </div>
+        <div class="forecast">
+          ${(w.periods||[]).map(p=>`
+            <div class="fc-row">
+              <span class="fc-day">${p.name}</span>
+              <span class="fc-icon">${wIcon(p.shortForecast)}</span>
+              <span class="fc-desc">${p.shortForecast}</span>
+              <span class="fc-temp">${p.temperature}°${p.temperatureUnit}</span>
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // ── Markets ──
+  if (s.markets?.length) {
+    h += `<div class="section" id="sec-markets">
+      <div class="sec-header"><span class="sec-title">📈 Markets</span><span class="sec-meta">Live</span></div>
+      <div class="mkt-grid">
+        ${s.markets.map(m => {
+          const pct = m.change_pct || 0;
+          const cls = pct >= 0 ? 'up' : 'down';
+          const arr = pct >= 0 ? '▲' : '▼';
+          const sym = m.symbol.replace('-USD','').replace('^','');
+          const price = sym === 'BTC' || sym === 'ETH'
+            ? '$' + Number(m.price).toLocaleString('en-US',{maximumFractionDigits:0})
+            : m.symbol.startsWith('^') ? Number(m.price).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
+            : '$' + Number(m.price).toFixed(2);
+          return `<div class="mkt-card">
+            <div class="mkt-sym">${sym}</div>
+            <div class="mkt-price">${price}</div>
+            <div class="mkt-chg ${cls}">${arr} ${Math.abs(pct).toFixed(2)}%</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+
+  // ── Local ──
+  if (s.local_news?.length) {
+    const [top, ...rest] = s.local_news;
+    h += `<div class="section" id="sec-local">
+      <div class="sec-header"><span class="sec-title">📍 Local</span><span class="sec-meta">${loc}</span></div>
+      <div class="news-featured" onclick="go('${esc(top.url)}')">
+        <div class="badge" style="background:rgba(240,192,64,.12);color:var(--accent)">Local</div>
+        <div class="featured-title">${top.title}</div>
+        <div class="featured-meta"><span class="featured-source">${top.source||''}</span>${top.pubDate?`<span>${ago(top.pubDate)}</span>`:''}</div>
+      </div>
+      <div class="news-stack">
+        ${rest.map(n => newsCard(n, 'Local', 'var(--accent)')).join('')}
+      </div>
+    </div>`;
+  }
+
+  // ── National ──
+  if (s.national_news?.length) {
+    h += `<div class="section" id="sec-national">
+      <div class="sec-header"><span class="sec-title">📰 National</span><span class="sec-meta">NPR</span></div>
+      <div class="news-stack">${s.national_news.slice(0,7).map(n => newsCard(n,'National','var(--blue)')).join('')}</div>
+    </div>`;
+  }
+
+  // ── Politics ──
+  const pol = s.politics || {};
+  if (pol.federal_reps?.length || pol.governor) {
+    const allPolNews = [...(pol.governor_news||[]), ...(pol.state_legislature||[]), ...(pol.federal_news||[])].slice(0,5);
+    h += `<div class="section" id="sec-politics">
+      <div class="sec-header"><span class="sec-title">🏛 Politics</span><span class="sec-meta">Federal · State · Local</span></div>
+      <div class="rep-grid">
+        ${pol.governor ? `<div class="rep-card">
+          <div class="rep-role">Governor</div>
+          <div class="rep-name">${pol.governor.name}</div>
+          <div class="rep-party ${pol.governor.party === 'R' ? 'party-r':'party-d'}">${pol.governor.party==='R'?'🔴 Republican':'🔵 Democrat'}</div>
+        </div>` : ''}
+        ${(pol.federal_reps||[]).map(r=>`<div class="rep-card">
+          <div class="rep-role">${r.chamber}${r.district ? ' · Dist. '+r.district:''}</div>
+          <div class="rep-name">${r.name}</div>
+          <div class="rep-party ${r.party==='Republican'?'party-r':'party-d'}">${r.party==='Republican'?'🔴 Republican':'🔵 Democrat'}</div>
+        </div>`).join('')}
+      </div>
+      <div class="news-stack">${allPolNews.map(n=>newsCard(n,'Civic','var(--teal)')).join('')}</div>
+    </div>`;
+  }
+
+  // ── Sports ──
+  const hsSports = s.hs_sports?.state_sports || [];
+  if (s.sports?.length || hsSports.length) {
+    h += `<div class="section" id="sec-sports">
+      <div class="sec-header"><span class="sec-title">🏆 Sports</span><span class="sec-meta">Pro · College · HS</span></div>
+      <div class="news-stack">${(s.sports||[]).map(n=>newsCard(n,'Sports','var(--green)')).join('')}</div>
+      ${hsSports.length ? `<div class="sub-label">High School</div><div class="news-stack">${hsSports.slice(0,3).map(n=>newsCard(n,'HS Sports','var(--green)')).join('')}</div>` : ''}
+    </div>`;
+  }
+
+  // ── Community ──
+  const hl = s.hyper_local || {};
+  const hasCommunity = hl.civic?.length || hl.local_business?.length || hl.events?.length || hl.community_pulse?.length;
+  if (hasCommunity) {
+    h += `<div class="section" id="sec-community">
+      <div class="sec-header"><span class="sec-title">🏙 Community</span><span class="sec-meta">City · Neighborhood</span></div>
+      ${hl.civic?.length ? `<div class="sub-label">City Government</div><div class="news-stack">${hl.civic.slice(0,4).map(n=>newsCard(n,'Civic','var(--teal)')).join('')}</div>` : ''}
+      ${hl.local_business?.length ? `<div class="sub-label">Openings & Closings</div><div class="news-stack">${hl.local_business.slice(0,4).map(n=>newsCard(n,'Business','var(--accent)')).join('')}</div>` : ''}
+      ${hl.events?.length ? `<div class="sub-label">This Week</div><div class="news-stack">${hl.events.slice(0,3).map(n=>newsCard(n,'Event','var(--orange)')).join('')}</div>` : ''}
+      ${hl.community_pulse?.length ? `<div class="sub-label">Community</div><div class="news-stack">${hl.community_pulse.slice(0,3).map(n=>newsCard(n,'Community','var(--blue)')).join('')}</div>` : ''}
+    </div>`;
+  }
+
+  // ── Interests ──
+  if (s.interests?.length) {
+    const topics = (profile?.interests||[]).slice(0,4).join(' · ');
+    h += `<div class="section">
+      <div class="sec-header"><span class="sec-title">💡 Your Topics</span><span class="sec-meta">${topics}</span></div>
+      <div class="news-stack">${s.interests.slice(0,6).map(n=>newsCard(n,'Topic','var(--blue)')).join('')}</div>
+    </div>`;
+  }
+
+  // ── Accounts to follow ──
+  const la  = s.local_accounts || {};
+  const all = [...(la.news||[]),...(la.gov||[]),...(la.weather||[]),...(la.sports||[])];
+  const sug = s.suggested_accounts || [];
+  if (all.length || sug.length) {
+    h += `<div class="section" id="sec-follow">
+      <div class="sec-header"><span class="sec-title">👤 Worth Following</span></div>
+      ${all.length ? `<div class="sub-label">In ${loc}</div>
+        <div class="account-grid">${all.map(a=>`<a class="acct-chip" href="${a.url||'#'}" target="_blank" rel="noopener">${a.handle||a.name}<span class="acct-sub">${a.platform||''}</span></a>`).join('')}</div>` : ''}
+      ${sug.length ? `<div class="sub-label" style="margin-top:14px">By Interest</div>
+        <div class="account-grid">${sug.slice(0,8).map(a=>`<a class="acct-chip" href="${a.url||'#'}" target="_blank" rel="noopener">${a.handle||a.name}<span class="acct-sub">${a.reason||''}</span></a>`).join('')}</div>` : ''}
+    </div>`;
+  }
+
+  document.getElementById('content').innerHTML = h;
+}
+
+// ── Helpers ──────────────────────────────────────────────────────
+function newsCard(n, label, color) {
+  const url = (n.url||'#').replace(/'/g,"\\'");
+  return `<div class="news-card" onclick="go('${url}')">
+    <div class="news-card-body">
+      <div class="badge" style="background:${color}22;color:${color}">${label}</div>
+      <div class="news-title">${n.title}</div>
+      <div class="news-meta">
+        <span class="news-source">${n.source||''}</span>
+        ${n.pubDate ? `<span>${ago(n.pubDate)}</span>` : ''}
+      </div>
+    </div>
+    <div class="news-chevron">›</div>
+  </div>`;
+}
+function wIcon(f='') {
+  const s = f.toLowerCase();
+  if (s.includes('snow')||s.includes('sleet'))       return '❄️';
+  if (s.includes('thunder')||s.includes('storm'))    return '⛈️';
+  if (s.includes('rain')||s.includes('shower'))      return '🌧️';
+  if (s.includes('fog'))                              return '🌫️';
+  if (s.includes('overcast'))                         return '☁️';
+  if (s.includes('cloud'))                            return '⛅';
+  if (s.includes('wind'))                             return '💨';
+  if (s.includes('clear')||s.includes('sunny'))       return '☀️';
+  return '🌤️';
+}
+function ago(d) {
+  try {
+    const m = (Date.now()-new Date(d).getTime())/60000;
+    if (m<60)   return Math.round(m)+'m ago';
+    if (m<1440) return Math.round(m/60)+'h ago';
+    return Math.round(m/1440)+'d ago';
+  } catch { return ''; }
+}
+function esc(s='') { return s.replace(/'/g,"\\'"); }
+function go(url)   { if (url && url !== '#') window.open(url,'_blank','noopener'); }
+
+function toggleFc(card) {
+  const fc   = card.querySelector('.forecast');
+  const icon = card.querySelector('.fc-toggle-icon');
+  fc.classList.toggle('open');
+  icon.classList.toggle('open');
+}
+
+// ── Section nav (scroll spy) ──────────────────────────────────────
+function initSectionNav() {
+  const pills = document.querySelectorAll('.nav-pill');
+  pills.forEach(p => {
+    p.addEventListener('click', () => {
+      pills.forEach(x => x.classList.remove('active'));
+      p.classList.add('active');
+      document.getElementById(p.dataset.target)?.scrollIntoView({ behavior:'smooth', block:'start' });
+      // Scroll pill into view in nav
+      p.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' });
+    });
+  });
+
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const id = e.target.id;
+        pills.forEach(p => { p.classList.toggle('active', p.dataset.target === id); });
+        document.querySelector(`.nav-pill.active`)?.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' });
+      }
+    });
+  }, { threshold: 0.3, rootMargin: '-80px 0px -40% 0px' });
+
+  document.querySelectorAll('.section[id]').forEach(s => obs.observe(s));
+}
+
+// ── Share ────────────────────────────────────────────────────────
+async function share() {
+  const loc = document.getElementById('loc-text').textContent;
+  const payload = { title: 'My Daily Briefing', text: `My personalized morning briefing for ${loc} — local news, weather, markets & more.`, url: location.href };
+  if (navigator.share) {
+    try { await navigator.share(payload); return; } catch {}
+  }
+  try {
+    await navigator.clipboard.writeText(location.href);
+    showToast('Link copied to clipboard!');
+  } catch { showToast('Share: ' + location.href); }
+}
+
+function showToast(msg, ms=2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), ms);
+}
+
+// ── Settings ────────────────────────────────────────────────────
+function openSettings() { document.getElementById('sheet-bg').classList.add('open'); }
+function handleSheetBg(e) { if (e.target.id === 'sheet-bg') closeSettings(); }
+function closeSettings()  { document.getElementById('sheet-bg').classList.remove('open'); }
+function editPrefs()      { closeSettings(); location.href = 'index.html'; }
+function signOut()        { localStorage.clear(); location.href = 'index.html'; }
+
+init();
+</script>
+</body>
+</html>

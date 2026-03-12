@@ -1,0 +1,53 @@
+{
+  "city_id": "phoenix",
+  "name": "Phoenix",
+  "state": "AZ",
+  "timezone": "America/Phoenix",
+  "coordinates": {
+    "lat": 33.4484,
+    "lon": -112.0740
+  },
+  "population": 1700000,
+  "theme": {
+    "primary_color": "#E56020",
+    "secondary_color": "#1D1160",
+    "icon": "🌵"
+  },
+  "data_sources": {
+    "weather": {
+      "provider": "nws",
+      "grid": {
+        "office": "PSR",
+        "gridX": 158,
+        "gridY": 58
+      }
+    },
+    "news": {
+      "local_rss": [
+        "https://www.azcentral.com/arcio/rss/category/news/"
+      ],
+      "twitter_accounts": [
+        "@azcentral",
+        "@PhoenixMayor"
+      ]
+    },
+    "traffic": {
+      "provider": "google_maps",
+      "transit_agencies": ["Valley Metro"]
+    },
+    "sports": {
+      "teams": [
+        {"name": "Diamondbacks", "league": "MLB", "sport": "baseball"},
+        {"name": "Suns", "league": "NBA", "sport": "basketball"},
+        {"name": "Coyotes", "league": "NHL", "sport": "hockey"},
+        {"name": "Cardinals", "league": "NFL", "sport": "football"}
+      ]
+    }
+  },
+  "features": {
+    "traffic_enabled": true,
+    "transit_enabled": true,
+    "sports_enabled": true,
+    "events_enabled": true
+  }
+}
