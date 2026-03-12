@@ -17,6 +17,7 @@ const { getLocalAccounts, getSuggestedNational } = require('./geo-accounts');
 const { getHyperLocal }  = require('./hyper-local');
 const { getPolitics }    = require('./politics');
 const { getHSSports }    = require('./hs-sports');
+const { getCommunity }   = require('./community');
 
 const app  = express();
 const PORT = process.env.PORT || 3001;
@@ -184,7 +185,7 @@ app.get('/api/users/:token/briefing', async (req, res) => {
     }
 
     // Fetch all sections in parallel, each fails gracefully
-    const [weather, markets, national_news, local_news, sports, interests_news, local_accounts, hyper_local, politics, hs_sports] =
+    const [weather, markets, national_news, local_news, sports, interests_news, local_accounts, hyper_local, politics, hs_sports, community_life] =
       await Promise.all([
         geoData.lat
           ? content.getWeather(geoData.lat, geoData.lng, nwsGrid).catch(() => null)
@@ -202,6 +203,7 @@ app.get('/api/users/:token/briefing', async (req, res) => {
         getHyperLocal({ city: geoData.city, state: geoData.state, zip_code: user.zip_code, lat: geoData.lat, lng: geoData.lng }).catch(() => ({})),
         getPolitics(user.zip_code, geoData.city, geoData.state).catch(() => ({})),
         getHSSports({ city: geoData.city, state: geoData.state, hs_teams: user.hs_teams || [] }).catch(() => ({})),
+        getCommunity({ city: geoData.city, state: geoData.state }).catch(() => ({})),
       ]);
 
     // Annotate weather with actionable summary
@@ -227,6 +229,7 @@ app.get('/api/users/:token/briefing', async (req, res) => {
         hyper_local,
         politics,
         hs_sports,
+        community_life,
       },
     });
   } catch (e) {

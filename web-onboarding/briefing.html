@@ -264,6 +264,26 @@
     .featured-meta  { font-size: 11px; color: var(--muted); display: flex; gap: 8px; }
     .featured-source{ color: var(--t2); font-weight: 500; }
 
+    /* ─── Obituary card ─── */
+    .obit-card {
+      background: var(--surface);
+      border: 1px solid var(--b2);
+      border-left: 3px solid #8a8a9a;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: background var(--t);
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .obit-card:hover { background: var(--s2); }
+    .obit-candle { font-size: 18px; flex-shrink: 0; opacity: .7; }
+    .obit-body { flex: 1; }
+    .obit-name { font-size: 14px; font-weight: 600; line-height: 1.4; color: var(--text); }
+    .obit-meta { font-size: 11px; color: var(--muted); margin-top: 4px; display: flex; gap: 8px; }
+
     /* ─── Alerts ─── */
     .alert-card {
       background: rgba(224,80,80,.06);
@@ -431,6 +451,7 @@
     <div class="nav-pill" data-target="sec-politics">🏛 Politics</div>
     <div class="nav-pill" data-target="sec-sports">🏆 Sports</div>
     <div class="nav-pill" data-target="sec-community">🏙 Community</div>
+    <div class="nav-pill" data-target="sec-life">🕯 Community Life</div>
     <div class="nav-pill" data-target="sec-follow">👤 Follow</div>
   </div>
 </div>
@@ -718,17 +739,55 @@ function render(data) {
     </div>`;
   }
 
-  // ── Community ──
+  // ── Community (civic/local) ──
   const hl = s.hyper_local || {};
   const hasCommunity = hl.civic?.length || hl.local_business?.length || hl.events?.length || hl.community_pulse?.length;
   if (hasCommunity) {
     h += `<div class="section" id="sec-community">
-      <div class="sec-header"><span class="sec-title">🏙 Community</span><span class="sec-meta">City · Neighborhood</span></div>
+      <div class="sec-header"><span class="sec-title">🏙 Your City</span><span class="sec-meta">Gov · Business · Events</span></div>
       ${hl.civic?.length ? `<div class="sub-label">City Government</div><div class="news-stack">${hl.civic.slice(0,4).map(n=>newsCard(n,'Civic','var(--teal)')).join('')}</div>` : ''}
       ${hl.local_business?.length ? `<div class="sub-label">Openings & Closings</div><div class="news-stack">${hl.local_business.slice(0,4).map(n=>newsCard(n,'Business','var(--accent)')).join('')}</div>` : ''}
       ${hl.events?.length ? `<div class="sub-label">This Week</div><div class="news-stack">${hl.events.slice(0,3).map(n=>newsCard(n,'Event','var(--orange)')).join('')}</div>` : ''}
-      ${hl.community_pulse?.length ? `<div class="sub-label">Community</div><div class="news-stack">${hl.community_pulse.slice(0,3).map(n=>newsCard(n,'Community','var(--blue)')).join('')}</div>` : ''}
+      ${hl.community_pulse?.length ? `<div class="sub-label">Around Town</div><div class="news-stack">${hl.community_pulse.slice(0,3).map(n=>newsCard(n,'Community','var(--blue)')).join('')}</div>` : ''}
     </div>`;
+  }
+
+  // ── Community Life (the newspaper soul: obituaries, announcements, milestones) ──
+  const cl = s.community_life || {};
+  const hasCL = cl.obituaries?.length || cl.announcements?.length || cl.faith?.length || cl.milestones?.length;
+  if (hasCL) {
+    h += `<div class="section" id="sec-life">
+      <div class="sec-header">
+        <span class="sec-title">🕯 Community Life</span>
+        <span class="sec-meta">Obituaries · Milestones · Announcements</span>
+      </div>`;
+
+    if (cl.obituaries?.length) {
+      h += `<div class="sub-label">In Memoriam</div>
+        <div class="news-stack">
+          ${cl.obituaries.map(n => obituaryCard(n)).join('')}
+        </div>`;
+    }
+    if (cl.announcements?.length) {
+      h += `<div class="sub-label">Milestones & Announcements</div>
+        <div class="news-stack">
+          ${cl.announcements.slice(0,3).map(n=>newsCard(n,'Announcement','var(--accent)')).join('')}
+        </div>`;
+    }
+    if (cl.milestones?.length) {
+      h += `<div class="sub-label">Local Milestones</div>
+        <div class="news-stack">
+          ${cl.milestones.map(n=>newsCard(n,'Milestone','#9b8ec4')).join('')}
+        </div>`;
+    }
+    if (cl.faith?.length) {
+      h += `<div class="sub-label">Faith & Nonprofit</div>
+        <div class="news-stack">
+          ${cl.faith.slice(0,3).map(n=>newsCard(n,'Community','var(--blue)')).join('')}
+        </div>`;
+    }
+
+    h += `</div>`;
   }
 
   // ── Interests ──
@@ -758,6 +817,25 @@ function render(data) {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────
+function obituaryCard(n) {
+  const url = (n.url||'#').replace(/'/g,"\\'");
+  // Try to extract just the name from "Obituary | John Smith of City, State - Funeral Home"
+  let name = n.title || '';
+  name = name.replace(/^Obituary\s*[\|:–-]\s*/i, '').replace(/\s*-\s*[^-]+$/, '').trim();
+  const source = n.source || '';
+  return `<div class="obit-card" onclick="go('${url}')">
+    <div class="obit-candle">🕯</div>
+    <div class="obit-body">
+      <div class="obit-name">${name}</div>
+      <div class="obit-meta">
+        <span>${source}</span>
+        ${n.pubDate ? `<span>${ago(n.pubDate)}</span>` : ''}
+      </div>
+    </div>
+    <div class="news-chevron">›</div>
+  </div>`;
+}
+
 function newsCard(n, label, color) {
   const url = (n.url||'#').replace(/'/g,"\\'");
   return `<div class="news-card" onclick="go('${url}')">
