@@ -267,8 +267,13 @@ async function getLocalNews(city, state) {
       source: item.source || tvFeed,
     }));
 
-    const merged = dedup([...normalizedTv, ...normalizedGoogle], 0.45);
-    return merged
+    // Hard age cap: local news must be ≤ 7 days old
+    const MAX_LOCAL_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+    const fresh = dedup([...normalizedTv, ...normalizedGoogle], 0.45).filter(item => {
+      const pub = Date.parse(item.published || '');
+      return isNaN(pub) || (Date.now() - pub) <= MAX_LOCAL_AGE_MS;
+    });
+    return fresh
       .sort((a, b) => localNewsScore(b, city, state) - localNewsScore(a, city, state))
       .slice(0, 6)
       .map(({ source_type, ...item }) => item);

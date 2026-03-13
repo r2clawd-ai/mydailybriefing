@@ -549,6 +549,16 @@
     .empty { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; }
     .err-btn { display: inline-block; margin-top: 16px; background: var(--accent); color: #111; font-weight: 700; font-size: 14px; padding: 10px 24px; border-radius: 100px; cursor: pointer; border: none; }
 
+  /* ── Read tracking ──────────────────────── */
+  .carried-story { border-left-color: #f59e0b !important; }
+  .carried-badge {
+    font-size: 11px;
+    color: #f59e0b;
+    font-weight: 600;
+    margin-bottom: 6px;
+    letter-spacing: .02em;
+  }
+
   /* ── Paywall ─────────────────────────────── */
   .pro-badge {
     display: inline-block;
@@ -1193,6 +1203,7 @@ function render(data) {
 
   document.getElementById('content').innerHTML = h;
   initSectionAnimations();
+  initReadTracking();
 }
 
 async function saveEmail() {
@@ -1234,8 +1245,9 @@ function obituaryCard(n) {
 }
 
 function newsCard(n, label, color) {
-  const url = (n.url||'#').replace(/'/g,"\\'");
-  return `<div class="news-card" style="--card-accent:${color}" onclick="go('${url}')">
+  const url     = (n.url||'#').replace(/'/g,"\\'");
+  const dataUrl = (n.url||'').replace(/"/g,'&quot;');
+  return `<div class="news-card" style="--card-accent:${color}" onclick="go('${url}')" data-url="${dataUrl}">
     <div class="news-card-body">
       <div class="badge" style="background:${color}22;color:${color}">${label}</div>
       <div class="news-title">${n.title}</div>
@@ -1434,6 +1446,102 @@ function initSectionAnimations() {
     section.classList.remove('is-visible');
     sectionFadeObserver.observe(section);
   });
+}
+
+// ── Read Tracking ─────────────────────────────────────────────────────────────
+// Track which stories the user has scrolled past (seen) vs clicked (read).
+// Stories seen but not clicked get pinned to tomorrow's briefing.
+
+const READ_KEY  = 'briefing_read';    // clicked stories
+const SEEN_KEY  = 'briefing_seen';    // scrolled-past stories
+const TODAY_KEY = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
+function getStore(key) {
+  try { return JSON.parse(localStorage.getItem(key) || '{}'); } catch { return {}; }
+}
+function setStore(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+}
+
+// Mark story as clicked/read
+function markRead(url) {
+  if (!url || url === '#') return;
+  const store = getStore(READ_KEY);
+  store[url] = TODAY_KEY;
+  setStore(READ_KEY, store);
+}
+
+// Mark story as seen (scrolled past)
+function markSeen(url) {
+  if (!url || url === '#') return;
+  const store = getStore(SEEN_KEY);
+  if (!store[url]) {
+    store[url] = TODAY_KEY;
+    setStore(SEEN_KEY, store);
+  }
+}
+
+// Get stories seen yesterday but not clicked (carry-forward list)
+function getCarryForward() {
+  const seenStore = getStore(SEEN_KEY);
+  const readStore = getStore(READ_KEY);
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  return Object.entries(seenStore)
+    .filter(([url, date]) => date === yesterday && !readStore[url])
+    .map(([url]) => url);
+}
+
+// Purge entries older than 3 days to keep storage clean
+function pruneStores() {
+  const cutoff = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10);
+  for (const key of [READ_KEY, SEEN_KEY]) {
+    const store = getStore(key);
+    let changed = false;
+    for (const [url, date] of Object.entries(store)) {
+      if (date < cutoff) { delete store[url]; changed = true; }
+    }
+    if (changed) setStore(key, store);
+  }
+}
+
+// Intercept go() to also mark as read
+const _originalGo = go;
+function go(url) {
+  markRead(url);
+  _originalGo(url);
+}
+
+// Watch news cards scroll into view → mark as seen
+let readObserver = null;
+function initReadTracking() {
+  pruneStores();
+
+  readObserver = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const url = entry.target.dataset.url;
+        if (url) markSeen(url);
+      }
+    });
+  }, { threshold: 0.5 }); // 50% visible = "seen"
+
+  // Observe all news cards that have a data-url attribute
+  document.querySelectorAll('[data-url]').forEach(el => readObserver.observe(el));
+
+  // Show carry-forward badge if there are unseen stories from yesterday
+  const carried = getCarryForward();
+  if (carried.length > 0) {
+    // Find any carried cards and add a "📌 From yesterday" badge
+    document.querySelectorAll('[data-url]').forEach(el => {
+      if (carried.includes(el.dataset.url)) {
+        el.classList.add('carried-story');
+        const badge = document.createElement('div');
+        badge.className = 'carried-badge';
+        badge.textContent = '📌 You scrolled past this yesterday';
+        el.insertBefore(badge, el.firstChild);
+      }
+    });
+  }
 }
 
 init();

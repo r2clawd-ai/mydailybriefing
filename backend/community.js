@@ -26,6 +26,18 @@ function gnNews(query) {
   return `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
 }
 
+/**
+ * Returns true if the item is within maxDays old (or has no parseable date).
+ * No date = include (benefit of doubt). Bad date = exclude.
+ */
+function withinDays(pubDate, maxDays) {
+  if (!pubDate) return true; // no date → keep
+  const ms = Date.parse(pubDate);
+  if (isNaN(ms)) return true; // unparseable → keep
+  const ageDays = (Date.now() - ms) / 86400000;
+  return ageDays <= maxDays;
+}
+
 function parseItem(it) {
   return {
     title:   (it.title?.['#text'] || it.title || '').replace(/<[^>]+>/g, '').trim(),
@@ -79,6 +91,9 @@ async function getObituaries(city, state) {
       const parsed = parseItem(it);
       if (!parsed.title || seen.has(parsed.title)) continue;
 
+      // Hard age cap: obituaries must be ≤ 14 days old
+      if (!withinDays(parsed.pubDate, 14)) continue;
+
       // Filter to actual obituaries — skip funeral home ads, service listings
       const t = parsed.title.toLowerCase();
       const isObit = t.includes('obituary') || t.includes('obit') ||
@@ -126,6 +141,9 @@ async function getAnnouncements(city, state) {
       const parsed = parseItem(it);
       if (!parsed.title || seen.has(parsed.title)) continue;
 
+      // Hard age cap: announcements must be ≤ 14 days old
+      if (!withinDays(parsed.pubDate, 14)) continue;
+
       const t = parsed.title.toLowerCase();
       // Skip pure news stories, keep personal/community items
       const skip = t.includes('stock') || t.includes('market') || t.includes('senate') ||
@@ -165,6 +183,9 @@ async function getFaithCommunity(city, state) {
       if (!parsed.title || seen.has(parsed.title)) continue;
 
       const t = parsed.title.toLowerCase();
+      // Hard age cap: faith/community must be ≤ 14 days old
+      if (!withinDays(parsed.pubDate, 14)) continue;
+
       const isCommunity = t.includes('church') || t.includes('faith') ||
                           t.includes('ministry') || t.includes('nonprofit') ||
                           t.includes('volunteer') || t.includes('food bank') ||
@@ -195,6 +216,9 @@ async function getMilestones(city, state) {
   for (const it of items) {
     const parsed = parseItem(it);
     if (!parsed.title || seen.has(parsed.title)) continue;
+
+    // Hard age cap: milestones must be ≤ 14 days old
+    if (!withinDays(parsed.pubDate, 14)) continue;
 
     const t = parsed.title.toLowerCase();
     const isMilestone = t.includes('anniversary') || t.includes('years') ||
