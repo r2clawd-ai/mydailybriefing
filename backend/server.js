@@ -21,6 +21,33 @@ const { getCommunity }   = require('./community');
 
 const app  = express();
 const PORT = process.env.PORT || 3001;
+const BRIEF_CACHE_TTL_MS = 15 * 60 * 1000;
+const briefingCache = new Map();
+
+function clearExpiredBriefCache() {
+  const now = Date.now();
+  for (const [token, entry] of briefingCache.entries()) {
+    if (!entry || now - entry.timestamp > BRIEF_CACHE_TTL_MS) {
+      briefingCache.delete(token);
+    }
+  }
+}
+
+function getCachedBrief(token) {
+  clearExpiredBriefCache();
+  const entry = briefingCache.get(token);
+  if (!entry) return null;
+  console.log(`[brief-cache] hit for token ${token}`);
+  return entry.payload;
+}
+
+function setCachedBrief(token, payload) {
+  briefingCache.set(token, { payload, timestamp: Date.now() });
+}
+
+function invalidateCachedBrief(token) {
+  briefingCache.delete(token);
+}
 
 app.use(cors({
   origin: [
@@ -114,6 +141,8 @@ app.post('/api/users/signup', async (req, res) => {
       interests, sports_teams, celeb_topics, twitter_handles, stocks, hs_teams,
     });
 
+    invalidateCachedBrief(user.token);
+
     res.status(201).json({ userId: user.id, token: user.token, profile: user });
   } catch (e) {
     console.error('Signup error:', e);
@@ -151,6 +180,7 @@ app.put('/api/users/:token/profile', async (req, res) => {
     }
 
     const updated = db.updateUser(token, updates);
+    invalidateCachedBrief(token);
     res.json(updated);
   } catch (e) {
     console.error('Profile update error:', e);
@@ -165,7 +195,13 @@ app.put('/api/users/:token/profile', async (req, res) => {
 // GET /api/users/:token/briefing
 app.get('/api/users/:token/briefing', async (req, res) => {
   try {
-    const user = db.getUserByToken(req.params.token);
+    const { token } = req.params;
+    const cached = getCachedBrief(token);
+    if (cached) {
+      return res.json(cached);
+    }
+
+    const user = db.getUserByToken(token);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     // Resolve geo if not already cached
@@ -240,7 +276,7 @@ app.get('/api/users/:token/briefing', async (req, res) => {
       localNewsItems
     );
 
-    res.json({
+    const payload = {
       generated_at: new Date().toISOString(),
       user: {
         email:    user.email,
@@ -260,7 +296,10 @@ app.get('/api/users/:token/briefing', async (req, res) => {
         hs_sports,
         community_life,
       },
-    });
+    };
+
+    setCachedBrief(token, payload);
+    res.json(payload);
   } catch (e) {
     console.error('Briefing error:', e);
     res.status(500).json({ error: e.message });
