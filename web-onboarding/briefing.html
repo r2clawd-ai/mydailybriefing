@@ -191,9 +191,31 @@
       padding-bottom: 10px;
       border-bottom: 1px solid var(--border);
       margin-bottom: 14px;
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
     }
+    .sec-header:active { opacity: .7; }
     .sec-title  { font-size: 12px; text-transform: uppercase; letter-spacing: .1em; font-weight: 800; color: var(--accent); }
     .sec-meta   { font-size: 11px; color: var(--muted); }
+    .sec-chevron {
+      font-size: 14px;
+      color: var(--muted);
+      transition: transform .25s ease;
+      margin-left: 8px;
+      flex-shrink: 0;
+    }
+    .section.collapsed .sec-chevron { transform: rotate(-90deg); }
+    .sec-body {
+      overflow: hidden;
+      transition: max-height .3s ease, opacity .25s ease;
+      max-height: 2000px;
+      opacity: 1;
+    }
+    .section.collapsed .sec-body {
+      max-height: 0;
+      opacity: 0;
+    }
     .sub-label  { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 12px 0 8px; }
 
     /* ─── Weather ─── */
@@ -1225,6 +1247,7 @@ function render(data) {
   document.getElementById('content').innerHTML = h;
   initSectionAnimations();
   initReadTracking();
+  initCollapsibleSections();
 }
 
 async function saveEmail() {
@@ -1466,6 +1489,44 @@ function initSectionAnimations() {
     section.classList.add('fade-in-up');
     section.classList.remove('is-visible');
     sectionFadeObserver.observe(section);
+  });
+}
+
+function initCollapsibleSections() {
+  const STORAGE_KEY = 'briefing_collapsed_sections';
+  let collapsed = new Set();
+  try { collapsed = new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')); } catch {}
+
+  document.querySelectorAll('.section').forEach(section => {
+    const header = section.querySelector('.sec-header');
+    if (!header) return;
+
+    // Add chevron to header
+    const chevron = document.createElement('span');
+    chevron.className = 'sec-chevron';
+    chevron.textContent = '›';
+    header.appendChild(chevron);
+
+    // Wrap all non-header children in sec-body
+    const body = document.createElement('div');
+    body.className = 'sec-body';
+    const children = Array.from(section.children).filter(c => !c.classList.contains('sec-header'));
+    children.forEach(c => body.appendChild(c));
+    section.appendChild(body);
+
+    // Restore collapsed state
+    const id = section.id;
+    if (id && collapsed.has(id)) section.classList.add('collapsed');
+
+    // Toggle on click
+    header.addEventListener('click', () => {
+      section.classList.toggle('collapsed');
+      if (id) {
+        if (section.classList.contains('collapsed')) collapsed.add(id);
+        else collapsed.delete(id);
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify([...collapsed])); } catch {}
+      }
+    });
   });
 }
 

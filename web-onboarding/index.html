@@ -197,7 +197,7 @@
       padding: 14px 16px 10px;
       box-shadow: 0 4px 24px rgba(0,0,0,.5);
       transform-origin: center center;
-      animation: npSpin 1.8s ease-in-out infinite;
+      animation: npSpin 2.6s ease-in-out infinite;
       will-change: transform;
     }
     @keyframes npSpin {
@@ -851,7 +851,7 @@ function animateBuildBar() {
       headEl.style.opacity = '1';
     }, 300);
   };
-  setInterval(cycleHeadline, 2000);
+  setInterval(cycleHeadline, 6000);
 }
 
 function showStep3Error(msg) {
@@ -887,6 +887,7 @@ async function finishSignup() {
 
   // Show building screen (replaces loading overlay — no z-index cover issues)
   showStep('building');
+  const buildStart = Date.now();
   animateBuildBar();
 
   const controller = new AbortController();
@@ -938,10 +939,13 @@ async function finishSignup() {
     }
 
     clearTimeout(timeoutId);
-    // Small delay so build bar looks intentional
+    // Enforce minimum 20s on the newspaper screen so people get 3 full headline cycles
+    const elapsed = Date.now() - buildStart;
+    const minDisplay = 20000;
+    const remaining = Math.max(0, minDisplay - elapsed);
     setTimeout(() => {
       location.href = `briefing.html?token=${encodeURIComponent(state.token)}`;
-    }, 600);
+    }, remaining);
 
   } catch (e) {
     clearTimeout(timeoutId);
