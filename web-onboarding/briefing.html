@@ -124,8 +124,8 @@
       background: #fff;
       color: #111;
       border-color: #fff;
-      font-weight: 700;
-      box-shadow: 0 2px 8px rgba(0,0,0,.35);
+      font-weight: 800;
+      box-shadow: 0 8px 20px rgba(0,0,0,.28);
     }
 
     /* ─── Page layout ─── */
@@ -152,13 +152,6 @@
     }
     .sec-title  { font-size: 12px; text-transform: uppercase; letter-spacing: .1em; font-weight: 800; color: var(--accent); }
     .sec-meta   { font-size: 11px; color: var(--muted); }
-    /* Section accent borders */
-    #sec-local .news-card    { border-left: 3px solid #3b82f6; }
-    #sec-national .news-card { border-left: 3px solid #8b5cf6; }
-    #sec-politics .news-card { border-left: 3px solid #ef4444; }
-    #sec-sports .news-card   { border-left: 3px solid #22c55e; }
-    #sec-markets .mkt-card   { border-left: 3px solid #14b8a6; }
-    /* Active nav pill upgrade */
     .sub-label  { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 12px 0 8px; }
 
     /* ─── Weather ─── */
@@ -166,7 +159,7 @@
       background: linear-gradient(145deg, #1a2540 0%, #0f1a30 100%);
       border: 1px solid rgba(255,255,255,.08);
       border-radius: var(--r);
-      padding: 24px 20px 18px;
+      padding: 24px 24px 18px;
       cursor: pointer;
       position: relative;
       overflow: hidden;
@@ -179,16 +172,32 @@
       pointer-events: none;
     }
     .weather-card:active { opacity: .95; }
-    .w-main { display: flex; justify-content: space-between; align-items: flex-start; }
-    .w-temp  { font-size: 72px; font-weight: 900; letter-spacing: -4px; line-height: 1; }
-    .w-unit  { font-size: 28px; font-weight: 300; color: rgba(255,255,255,.5); vertical-align: super; }
-    .w-icon  { font-size: 64px; filter: drop-shadow(0 4px 12px rgba(0,0,0,.5)); margin-top: -4px; }
-    .w-name  { font-size: 18px; font-weight: 600; color: rgba(255,255,255,.9); margin-top: 8px; }
-    .w-desc  { font-size: 13px; color: rgba(255,255,255,.5); margin-top: 3px; }
-    .w-meta-row { display: flex; gap: 16px; margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,.08); }
-    .w-meta-item { display: flex; flex-direction: column; gap: 2px; }
-    .w-meta-label { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: rgba(255,255,255,.35); }
-    .w-meta-value { font-size: 14px; font-weight: 600; color: rgba(255,255,255,.85); }
+    .w-main { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+    .w-temp-line { display: flex; align-items: flex-start; gap: 2px; }
+    .w-temp  { font-size: 72px; font-weight: 900; letter-spacing: -4px; line-height: .92; }
+    .w-unit  { font-size: 24px; font-weight: 600; color: rgba(255,255,255,.6); margin-top: 8px; }
+    .w-icon  { font-size: 52px; filter: drop-shadow(0 4px 12px rgba(0,0,0,.5)); margin-top: 4px; }
+    .w-name  { font-size: 14px; font-weight: 600; color: rgba(255,255,255,.7); margin-top: 10px; text-transform: uppercase; letter-spacing: .08em; }
+    .w-desc  { font-size: 28px; font-weight: 800; color: rgba(255,255,255,.95); margin-top: 4px; line-height: 1.1; }
+    .w-hi-lo { margin-top: 16px; font-size: 14px; color: rgba(255,255,255,.74); }
+    .w-hi-lo strong { color: #fff; }
+    .w-meta-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .w-meta-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.06);
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+    .w-meta-label { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: rgba(255,255,255,.4); }
+    .w-meta-value { font-size: 18px; font-weight: 700; color: rgba(255,255,255,.92); }
     .action-box {
       background: rgba(240,192,64,.08);
       border: 1px solid rgba(240,192,64,.2);
@@ -221,6 +230,7 @@
     .mkt-card {
       background: var(--surface);
       border: 1px solid var(--b2);
+      border-left: 3px solid #14b8a6;
       border-radius: 12px;
       padding: 14px;
       transition: transform var(--t), border-color var(--t);
@@ -240,6 +250,7 @@
     .news-card {
       background: var(--surface);
       border: 1px solid var(--b2);
+      border-left: 3px solid var(--card-accent, transparent);
       border-radius: 12px;
       padding: 14px 16px;
       cursor: pointer;
@@ -266,6 +277,7 @@
     .news-featured {
       background: var(--surface);
       border: 1px solid var(--b2);
+      border-left: 3px solid var(--card-accent, transparent);
       border-radius: var(--r);
       padding: 18px;
       cursor: pointer;
@@ -301,6 +313,7 @@
     .alert-card {
       background: rgba(224,80,80,.06);
       border: 1px solid rgba(224,80,80,.22);
+      border-left: 3px solid #f0c040;
       border-radius: 12px;
       padding: 14px 16px;
       margin-bottom: 8px;
@@ -849,6 +862,9 @@ function render(data) {
   if (w?.current) {
     const c    = w.current;
     const icon = wIcon(c.shortForecast);
+    const hiLo = getWeatherRange(w);
+    const precip = getPrecipitation(c);
+    const feelsLike = getFeelsLike(c);
     const alerts = s.hyper_local?.alerts || [];
     h += `<div class="section" id="sec-weather">
       <div class="sec-header"><span class="sec-title">⛅ Weather</span><span class="sec-meta">${loc}</span></div>
@@ -863,17 +879,20 @@ function render(data) {
       <div class="weather-card" onclick="toggleFc(this)">
         <div class="w-main">
           <div>
-            <div class="w-temp">${c.temperature}<span class="w-unit">°${c.temperatureUnit}</span></div>
-            <div class="w-name">${c.shortForecast}</div>
-            <div class="w-desc">${c.name}</div>
+            <div class="w-temp-line">
+              <div class="w-temp">${c.temperature}</div>
+              <span class="w-unit">°${c.temperatureUnit}</span>
+            </div>
+            <div class="w-name">${c.name}</div>
+            <div class="w-desc">${c.shortForecast}</div>
           </div>
           <div class="w-icon">${icon}</div>
         </div>
+        <div class="w-hi-lo"><strong>${hiLo}</strong></div>
         <div class="w-meta-row">
+          <div class="w-meta-item"><div class="w-meta-label">Precipitation</div><div class="w-meta-value">${precip}</div></div>
+          <div class="w-meta-item"><div class="w-meta-label">Feels Like</div><div class="w-meta-value">${feelsLike}</div></div>
           ${c.windSpeed ? `<div class="w-meta-item"><div class="w-meta-label">Wind</div><div class="w-meta-value">${c.windSpeed}</div></div>` : ''}
-          ${c.probabilityOfPrecipitation?.value != null ? `<div class="w-meta-item"><div class="w-meta-label">Rain</div><div class="w-meta-value">${c.probabilityOfPrecipitation.value}%</div></div>` : ''}
-          ${c.relativeHumidity?.value != null ? `<div class="w-meta-item"><div class="w-meta-label">Humidity</div><div class="w-meta-value">${c.relativeHumidity.value}%</div></div>` : ''}
-          ${(w.periods||[]).length > 0 ? `<div class="w-meta-item"><div class="w-meta-label">Tonight</div><div class="w-meta-value">${(w.periods[0]||{}).temperature || '—'}°</div></div>` : ''}
         </div>
         ${c.action ? `<div class="action-box">${c.action}</div>` : ''}
         <div class="fc-toggle">
@@ -922,13 +941,13 @@ function render(data) {
     const [top, ...rest] = s.local_news;
     h += `<div class="section" id="sec-local">
       <div class="sec-header"><span class="sec-title">📍 Local</span><span class="sec-meta">${loc}</span></div>
-      <div class="news-featured" onclick="go('${esc(top.url)}')">
+      <div class="news-featured" style="--card-accent:#3b82f6" onclick="go('${esc(top.url)}')">
         <div class="badge" style="background:rgba(240,192,64,.12);color:var(--accent)">Local</div>
         <div class="featured-title">${top.title}</div>
         <div class="featured-meta"><span class="featured-source">${top.source||''}</span>${top.pubDate?`<span>${ago(top.pubDate)}</span>`:''}</div>
       </div>
       <div class="news-stack">
-        ${rest.map(n => newsCard(n, 'Local', 'var(--accent)')).join('')}
+        ${rest.map(n => newsCard(n, 'Local', '#3b82f6')).join('')}
       </div>
     </div>`;
   }
@@ -937,7 +956,7 @@ function render(data) {
   if (s.national_news?.length) {
     h += `<div class="section" id="sec-national">
       <div class="sec-header"><span class="sec-title">📰 National</span><span class="sec-meta">NPR</span></div>
-      <div class="news-stack">${s.national_news.slice(0,7).map(n => newsCard(n,'National','var(--blue)')).join('')}</div>
+      <div class="news-stack">${s.national_news.slice(0,7).map(n => newsCard(n,'National','#8b5cf6')).join('')}</div>
     </div>`;
   }
 
@@ -968,8 +987,8 @@ function render(data) {
   if (s.sports?.length || hsSports.length) {
     h += `<div class="section" id="sec-sports">
       <div class="sec-header"><span class="sec-title">🏆 Sports</span><span class="sec-meta">Pro · College · HS</span></div>
-      <div class="news-stack">${(s.sports||[]).map(n=>newsCard(n,'Sports','var(--green)')).join('')}</div>
-      ${hsSports.length ? `<div class="sub-label">High School</div><div class="news-stack">${hsSports.slice(0,3).map(n=>newsCard(n,'HS Sports','var(--green)')).join('')}</div>` : ''}
+      <div class="news-stack">${(s.sports||[]).map(n=>newsCard(n,'Sports','#22c55e')).join('')}</div>
+      ${hsSports.length ? `<div class="sub-label">High School</div><div class="news-stack">${hsSports.slice(0,3).map(n=>newsCard(n,'HS Sports','#22c55e')).join('')}</div>` : ''}
     </div>`;
   }
 
@@ -1072,7 +1091,7 @@ function obituaryCard(n) {
 
 function newsCard(n, label, color) {
   const url = (n.url||'#').replace(/'/g,"\\'");
-  return `<div class="news-card" onclick="go('${url}')">
+  return `<div class="news-card" style="--card-accent:${color}" onclick="go('${url}')">
     <div class="news-card-body">
       <div class="badge" style="background:${color}22;color:${color}">${label}</div>
       <div class="news-title">${n.title}</div>
@@ -1083,6 +1102,35 @@ function newsCard(n, label, color) {
     </div>
     <div class="news-chevron">›</div>
   </div>`;
+}
+function getWeatherRange(weather) {
+  const current = weather?.current;
+  const tonight = weather?.tonight;
+  const tomorrow = weather?.tomorrow;
+  const unit = current?.temperatureUnit || tomorrow?.temperatureUnit || 'F';
+  const high = current?.isDaytime ? current?.temperature : (tomorrow?.temperature ?? current?.temperature);
+  const low = tonight?.temperature ?? current?.temperature;
+  return `High ${high ?? '—'}°${unit} / Low ${low ?? '—'}°${unit}`;
+}
+function getPrecipitation(period) {
+  const pct = period?.probabilityOfPrecipitation?.value;
+  return typeof pct === 'number' ? `${pct}%` : '—';
+}
+function getFeelsLike(period) {
+  const temp = Number(period?.temperature);
+  const unit = period?.temperatureUnit || 'F';
+  if (!Number.isFinite(temp)) return '—';
+  if (unit !== 'F') return `${Math.round(temp)}°${unit}`;
+
+  const windMatch = String(period?.windSpeed || '').match(/(\d+)/);
+  const wind = windMatch ? Number(windMatch[1]) : 0;
+
+  if (temp <= 50 && wind >= 3) {
+    const chill = 35.74 + (0.6215 * temp) - (35.75 * Math.pow(wind, 0.16)) + (0.4275 * temp * Math.pow(wind, 0.16));
+    return `${Math.round(chill)}°F`;
+  }
+
+  return `${Math.round(temp)}°F`;
 }
 function wIcon(f='') {
   const s = f.toLowerCase();
@@ -1163,15 +1211,21 @@ function initSectionNav() {
 
 // ── Share ────────────────────────────────────────────────────────
 async function share() {
-  const loc = document.getElementById('loc-text').textContent;
-  const payload = { title: 'My Daily Briefing', text: `My personalized morning briefing for ${loc} — local news, weather, markets & more.`, url: location.href };
+  const loc   = document.getElementById('loc-text').textContent;
+  const token = localStorage.getItem('briefing_token') || '';
+  const shareUrl = `https://mydailybriefing.app/?ref=share`;
+  const payload  = {
+    title: 'My Daily Briefing',
+    text: `My personalized morning briefing for ${loc} — local news, weather, markets & more.`,
+    url: shareUrl
+  };
   if (navigator.share) {
-    try { await navigator.share(payload); return; } catch {}
+    try { await navigator.share(payload); return; } catch(e) { if (e.name === 'AbortError') return; }
   }
   try {
-    await navigator.clipboard.writeText(location.href);
-    showToast('Link copied to clipboard!');
-  } catch { showToast('Share: ' + location.href); }
+    await navigator.clipboard.writeText(shareUrl);
+    showToast('🔗 Link copied! Share with someone in your town.');
+  } catch { showToast('Share: ' + shareUrl); }
 }
 
 function showToast(msg, ms=2500) {
