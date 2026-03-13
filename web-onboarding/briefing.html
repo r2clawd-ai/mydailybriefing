@@ -913,9 +913,10 @@ async function loadBriefing(refresh = false) {
     clearInterval(tick);
     document.getElementById('loading-screen')?.remove();
     document.getElementById('content').innerHTML = `
-      <div class="empty">
-        <div style="font-size:32px;margin-bottom:12px">⚠️</div>
-        <div>Couldn't load your briefing.</div>
+      <div class="empty" style="padding:48px 20px;text-align:center">
+        <div style="font-size:48px;margin-bottom:16px">📰</div>
+        <div style="font-size:18px;font-weight:700;margin-bottom:8px">Your briefing is taking a moment</div>
+        <div style="font-size:14px;color:var(--muted);margin-bottom:24px">This usually resolves in a few seconds. Could be a slow news day 😄</div>
         <button class="err-btn" onclick="loadBriefing(true)">Try again</button>
       </div>`;
   } finally {
