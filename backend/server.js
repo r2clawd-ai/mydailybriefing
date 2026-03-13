@@ -231,7 +231,7 @@ app.get('/api/users/:token/briefing', async (req, res) => {
     }
 
     // Fetch all sections in parallel, each fails gracefully
-    const [weather, markets, national_news, local_news, sports, interests_news, local_accounts, hyper_local, politics, hs_sports, community_life] =
+    const [weather, markets, national_news, local_news, sports, interests_news, local_accounts, hyper_local, politics, hs_sports, community_life, follow_feed] =
       await Promise.all([
         geoData.lat
           ? content.getWeather(geoData.lat, geoData.lng, nwsGrid).catch(() => null)
@@ -250,6 +250,9 @@ app.get('/api/users/:token/briefing', async (req, res) => {
         getPolitics(user.zip_code, geoData.city, geoData.state).catch(() => ({})),
         getHSSports({ city: geoData.city, state: geoData.state, hs_teams: user.hs_teams || [] }).catch(() => ({})),
         getCommunity({ city: geoData.city, state: geoData.state }).catch(() => ({})),
+        (user.twitter_handles?.length)
+          ? content.getFollowFeed(user.twitter_handles).catch(() => [])
+          : Promise.resolve([]),
       ]);
 
     // Annotate weather with actionable summary
@@ -303,6 +306,7 @@ app.get('/api/users/:token/briefing', async (req, res) => {
         politics,
         hs_sports,
         community_life,
+        follow_feed,
       },
     };
 

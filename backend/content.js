@@ -427,3 +427,40 @@ function getWeatherAction(period) {
 }
 
 module.exports.getWeatherAction = getWeatherAction;
+
+/**
+ * Get news feed for followed X/Twitter handles.
+ * Uses Google News search per handle — no API key required.
+ * Returns up to 3 items per handle, max 15 total, deduped.
+ */
+async function getFollowFeed(handles = []) {
+  if (!handles.length) return [];
+
+  const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+  const results = await Promise.all(
+    handles.slice(0, 5).map(async (handle) => {
+      try {
+        const items = await fetchRSS(GOOGLE_NEWS_RSS(`@${handle} OR "${handle}"`));
+        return items
+          .map(normalizeItem)
+          .filter(item => {
+            const pub = Date.parse(item.published || '');
+            return isNaN(pub) || (Date.now() - pub) <= MAX_AGE_MS;
+          })
+          .slice(0, 3)
+          .map(item => ({ ...item, follow_handle: handle }));
+      } catch { return []; }
+    })
+  );
+
+  const flat = results.flat();
+  const seen = new Set();
+  return flat.filter(item => {
+    if (seen.has(item.title)) return false;
+    seen.add(item.title);
+    return true;
+  }).slice(0, 15);
+}
+
+module.exports.getFollowFeed = getFollowFeed;

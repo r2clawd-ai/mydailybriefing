@@ -1176,12 +1176,33 @@ function render(data) {
   const la  = s.local_accounts || {};
   const all = [...(la.news||[]),...(la.gov||[]),...(la.weather||[]),...(la.sports||[])];
   const sug = s.suggested_accounts || [];
-  if (all.length || sug.length) {
+  const followFeed = s.follow_feed || [];
+  if (all.length || sug.length || followFeed.length) {
     h += `<div class="section" id="sec-follow">
-      <div class="sec-header"><span class="sec-title">👤 Worth Following</span></div>
-      ${all.length ? `<div class="sub-label">In ${loc}</div>
+      <div class="sec-header"><span class="sec-title">👤 Following</span></div>
+      ${followFeed.length ? `
+        <div class="sub-label">From the people you follow</div>
+        <div class="news-stack">
+          ${followFeed.map(n => {
+            const handle = n.follow_handle || '';
+            const url = (n.url||'#').replace(/'/g,"\\'");
+            const dataUrl = (n.url||'').replace(/"/g,'&quot;');
+            return `<div class="news-card" style="--card-accent:#1d9bf0" onclick="go('${url}')" data-url="${dataUrl}">
+              <div class="news-card-body">
+                <div class="badge" style="background:#1d9bf022;color:#1d9bf0">@${handle}</div>
+                <div class="news-title">${n.title}</div>
+                <div class="news-meta">
+                  <span class="news-source">${n.source||''}</span>
+                  ${n.pubDate ? `<span>${ago(n.pubDate)}</span>` : ''}
+                </div>
+              </div>
+              <div class="news-chevron">›</div>
+            </div>`;
+          }).join('')}
+        </div>` : ''}
+      ${all.length ? `<div class="sub-label" style="margin-top:${followFeed.length?'16px':'0'}">Local accounts in ${loc}</div>
         <div class="account-grid">${all.map(a=>`<a class="acct-chip" href="${a.url||'#'}" target="_blank" rel="noopener">${a.handle||a.name}<span class="acct-sub">${a.platform||''}</span></a>`).join('')}</div>` : ''}
-      ${sug.length ? `<div class="sub-label" style="margin-top:14px">By Interest</div>
+      ${sug.length ? `<div class="sub-label" style="margin-top:14px">Suggested by interest</div>
         <div class="account-grid">${sug.slice(0,8).map(a=>`<a class="acct-chip" href="${a.url||'#'}" target="_blank" rel="noopener">${a.handle||a.name}<span class="acct-sub">${a.reason||''}</span></a>`).join('')}</div>` : ''}
     </div>`;
   }
