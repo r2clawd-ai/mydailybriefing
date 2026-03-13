@@ -5,9 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#0d0d0d" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="description" content="The personalized morning paper your town stopped printing. Local news, weather, markets, obituaries, politics, and more — built around your ZIP code." />
+  <meta name="description" content="Stop doomscrolling. Get a personalized morning briefing with local news, weather, markets, your reps, and more — built around your ZIP code. Free during beta." />
+  <meta property="og:title" content="My Daily Briefing — Your town’s news, built for you" />
+  <meta property="og:description" content="Local news, weather, markets, politics, high school sports — one clean briefing every morning, personalized to your ZIP code." />
+  <meta property="og:image" content="https://mydailybriefing.app/og-image.png" />
+  <meta property="og:url" content="https://mydailybriefing.app/" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="My Daily Briefing — Your town’s news, built for you" />
+  <meta name="twitter:description" content="Local news, weather, markets, and more — personalized to your ZIP. Free during beta." />
+  <meta name="twitter:image" content="https://mydailybriefing.app/og-image.png" />
+  <link rel="canonical" href="https://mydailybriefing.app/" />
   <link rel="manifest" href="/manifest.json" />
-  <title>My Daily Briefing — The personalized morning paper your town stopped printing</title>
+  <title>My Daily Briefing — Stop doomscrolling. Start your day with what matters.</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -149,12 +159,39 @@
 
     /* Trust strip — clean single line, no checkmarks */
     .trust-strip {
-      margin-top: 36px;
+      margin-top: 28px;
       text-align: center;
       font-size: 12px;
       color: var(--muted);
       letter-spacing: .02em;
     }
+    /* Demo preview strip */
+    .demo-preview-strip {
+      margin-top: 32px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+    }
+    .demo-preview-strip:hover { border-color: var(--accent); background: rgba(240,192,64,.04); }
+    .demo-preview-label { font-size: 12px; color: var(--accent); font-weight: 600; letter-spacing: .04em; margin-bottom: 10px; }
+    .demo-cards-row { display: flex; gap: 10px; overflow-x: auto; }
+    .demo-mini-card {
+      flex-shrink: 0;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      min-width: 160px;
+    }
+    .demo-mini-card.weather-demo { background: linear-gradient(135deg, #1a2540, #0f1a30); border-color: rgba(255,255,255,.1); }
+    .dmc-icon { font-size: 22px; flex-shrink: 0; }
+    .dmc-title { font-size: 13px; font-weight: 600; color: var(--text); }
+    .dmc-sub   { font-size: 11px; color: var(--muted); margin-top: 2px; }
 
     /* ─── Onboarding wrapper ─── */
     #onboarding { display: none; max-width: 560px; margin: 0 auto; padding: 24px 16px 80px; min-height: 100vh; }
@@ -352,40 +389,67 @@
 
 <!-- ── Landing page ── -->
 <div class="landing" id="landing">
-  <div class="logo-mark">☀️</div>
-  <h1>The personalized morning paper<br>your town <em>stopped printing.</em></h1>
+  <div class="logo-mark">📰</div>
+  <h1>Stop doomscrolling.<br>Start your day with <em>what matters.</em></h1>
   <p class="landing-sub">
-    Local news, weather, markets, obituaries, politics, your reps, high school sports — brought together into one daily read built specifically around you and your ZIP code.
+    Your ZIP code. Your reps. Your stocks. Your local news. One clean briefing — every morning, built just for you.
   </p>
 
-  <div class="social-proof-row">
-    <div class="proof-item">Built around your ZIP code</div>
-    <div class="proof-divider">·</div>
-    <div class="proof-item">No two briefings are alike</div>
-    <div class="proof-divider">·</div>
-    <div class="proof-item">One read, every morning</div>
+  <div class="cta-row">
+    <button class="btn-primary" onclick="startOnboarding()">Build my briefing — free →</button>
+    <button class="btn-ghost" onclick="tryDemo()">See a live example ↗</button>
   </div>
 
-  <div class="cta-row">
-    <button class="btn-primary" onclick="startOnboarding()">Build my paper →</button>
-    <button class="btn-ghost" onclick="tryDemo()">See an example</button>
+  <div class="social-proof-row">
+    <div class="proof-item">✓ Free during beta</div>
+    <div class="proof-divider">·</div>
+    <div class="proof-item">✓ Under 2 min to set up</div>
+    <div class="proof-divider">·</div>
+    <div class="proof-item">✓ No app to download</div>
   </div>
 
   <div class="what-you-get">
-    <div class="wg-label">What's in your briefing</div>
+    <div class="wg-label">Everything in your briefing</div>
     <div class="wg-grid">
-      <div class="wg-item"><span class="wg-icon">🌤</span><span>Weather, actionable</span></div>
-      <div class="wg-item"><span class="wg-icon">📍</span><span>Your neighborhood</span></div>
-      <div class="wg-item"><span class="wg-icon">📈</span><span>Markets and stocks</span></div>
-      <div class="wg-item"><span class="wg-icon">🗳</span><span>Your elected representatives</span></div>
-      <div class="wg-item"><span class="wg-icon">🏅</span><span>High school sports</span></div>
-      <div class="wg-item"><span class="wg-icon">🏛</span><span>City government</span></div>
-      <div class="wg-item"><span class="wg-icon">📰</span><span>National headlines</span></div>
-      <div class="wg-item"><span class="wg-icon">🕯</span><span>Obituaries and milestones</span></div>
+      <div class="wg-item"><span class="wg-icon">🌤</span><span>Weather + alerts</span></div>
+      <div class="wg-item"><span class="wg-icon">📍</span><span>Local news</span></div>
+      <div class="wg-item"><span class="wg-icon">📈</span><span>Markets + your stocks</span></div>
+      <div class="wg-item"><span class="wg-icon">🏛</span><span>Your elected reps</span></div>
+      <div class="wg-item"><span class="wg-icon">🏅</span><span>HS sports scores</span></div>
+      <div class="wg-item"><span class="wg-icon">🗞</span><span>National headlines</span></div>
+      <div class="wg-item"><span class="wg-icon">💬</span><span>Community pulse</span></div>
+      <div class="wg-item"><span class="wg-icon">🕯</span><span>Obits + milestones</span></div>
     </div>
   </div>
 
-  <div class="trust-strip">Free · No spam · No download required · Works on any device</div>
+  <div class="demo-preview-strip" onclick="tryDemo()">
+    <div class="demo-preview-label">Live example — Sioux Falls, SD →</div>
+    <div class="demo-cards-row">
+      <div class="demo-mini-card weather-demo">
+        <div class="dmc-icon">🌤</div>
+        <div class="dmc-body">
+          <div class="dmc-title">26°F · Partly Cloudy</div>
+          <div class="dmc-sub">Wind 25–35 mph · Rain 50%</div>
+        </div>
+      </div>
+      <div class="demo-mini-card">
+        <div class="dmc-icon">📍</div>
+        <div class="dmc-body">
+          <div class="dmc-title">Local News</div>
+          <div class="dmc-sub">6 stories from your area</div>
+        </div>
+      </div>
+      <div class="demo-mini-card">
+        <div class="dmc-icon">📈</div>
+        <div class="dmc-body">
+          <div class="dmc-title">SPY · QQQ · BTC</div>
+          <div class="dmc-sub">Live market prices</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="trust-strip">Free during beta · No spam · No download needed · Works on any device</div>
 </div>
 
 <!-- ── Onboarding ── -->

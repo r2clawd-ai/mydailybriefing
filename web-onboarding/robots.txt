@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /briefing.html
+
+Sitemap: https://mydailybriefing.app/sitemap.xml
