@@ -42,12 +42,13 @@ function parseUser(row) {
   if (!row) return null;
   return {
     ...row,
-    interests:       JSON.parse(row.interests       || '[]'),
-    sports_teams:    JSON.parse(row.sports_teams    || '[]'),
-    celeb_topics:    JSON.parse(row.celeb_topics    || '[]'),
-    twitter_handles: JSON.parse(row.twitter_handles || '[]'),
-    stocks:          JSON.parse(row.stocks          || '[]'),
-    hs_teams:        JSON.parse(row.hs_teams        || '[]'),
+    interests:        JSON.parse(row.interests        || '[]'),
+    sports_teams:     JSON.parse(row.sports_teams     || '[]'),
+    celeb_topics:     JSON.parse(row.celeb_topics     || '[]'),
+    twitter_handles:  JSON.parse(row.twitter_handles  || '[]'),
+    stocks:           JSON.parse(row.stocks           || '[]'),
+    hs_teams:         JSON.parse(row.hs_teams         || '[]'),
+    saved_locations:  JSON.parse(row.saved_locations  || '[]'),
   };
 }
 
@@ -55,10 +56,10 @@ function parseUser(row) {
 
 const stmtInsert = db.prepare(`
   INSERT INTO users (id, email, zip_code, city, state, lat, lng,
-    interests, sports_teams, celeb_topics, twitter_handles, stocks, hs_teams,
+    interests, sports_teams, celeb_topics, twitter_handles, stocks, hs_teams, saved_locations,
     created_at, token)
   VALUES (@id, @email, @zip_code, @city, @state, @lat, @lng,
-    @interests, @sports_teams, @celeb_topics, @twitter_handles, @stocks, @hs_teams,
+    @interests, @sports_teams, @celeb_topics, @twitter_handles, @stocks, @hs_teams, @saved_locations,
     @created_at, @token)
 `);
 
@@ -72,12 +73,13 @@ const stmtUpdate = db.prepare(`
     state           = COALESCE(@state, state),
     lat             = COALESCE(@lat, lat),
     lng             = COALESCE(@lng, lng),
-    interests       = COALESCE(@interests, interests),
-    sports_teams    = COALESCE(@sports_teams, sports_teams),
-    celeb_topics    = COALESCE(@celeb_topics, celeb_topics),
-    twitter_handles = COALESCE(@twitter_handles, twitter_handles),
-    stocks          = COALESCE(@stocks, stocks),
-    hs_teams        = COALESCE(@hs_teams, hs_teams)
+    interests        = COALESCE(@interests, interests),
+    sports_teams     = COALESCE(@sports_teams, sports_teams),
+    celeb_topics     = COALESCE(@celeb_topics, celeb_topics),
+    twitter_handles  = COALESCE(@twitter_handles, twitter_handles),
+    stocks           = COALESCE(@stocks, stocks),
+    hs_teams         = COALESCE(@hs_teams, hs_teams),
+    saved_locations  = COALESCE(@saved_locations, saved_locations)
   WHERE token = @token
 `);
 
@@ -85,23 +87,30 @@ const stmtUpdate = db.prepare(`
 
 function createUser({ email, zip_code, city, state, lat, lng,
                        interests = [], sports_teams = [], celeb_topics = [],
-                       twitter_handles = [], stocks = [], hs_teams = [] }) {
+                       twitter_handles = [], stocks = [], hs_teams = [], saved_locations = [] }) {
   const id    = uuidv4();
   const token = uuidv4();
   const now   = new Date().toISOString();
 
+  // Auto-add home location to saved_locations if not already present
+  const homeLoc = city && state
+    ? [{ zip: zip_code, label: 'Home', city, state }]
+    : [];
+  const locs = saved_locations.length ? saved_locations : homeLoc;
+
   stmtInsert.run({
     id, email, zip_code,
-    city:            city    || null,
-    state:           state   || null,
-    lat:             lat     || null,
-    lng:             lng     || null,
-    interests:       JSON.stringify(interests),
-    sports_teams:    JSON.stringify(sports_teams),
-    celeb_topics:    JSON.stringify(celeb_topics),
-    twitter_handles: JSON.stringify(twitter_handles),
-    stocks:          JSON.stringify(stocks),
-    hs_teams:        JSON.stringify(hs_teams),
+    city:             city    || null,
+    state:            state   || null,
+    lat:              lat     || null,
+    lng:              lng     || null,
+    interests:        JSON.stringify(interests),
+    sports_teams:     JSON.stringify(sports_teams),
+    celeb_topics:     JSON.stringify(celeb_topics),
+    twitter_handles:  JSON.stringify(twitter_handles),
+    stocks:           JSON.stringify(stocks),
+    hs_teams:         JSON.stringify(hs_teams),
+    saved_locations:  JSON.stringify(locs),
     created_at: now,
     token,
   });
@@ -128,8 +137,9 @@ function updateUser(token, fields) {
   if (fields.sports_teams    !== undefined) patch.sports_teams    = JSON.stringify(fields.sports_teams);
   if (fields.celeb_topics    !== undefined) patch.celeb_topics    = JSON.stringify(fields.celeb_topics);
   if (fields.twitter_handles !== undefined) patch.twitter_handles = JSON.stringify(fields.twitter_handles);
-  if (fields.stocks          !== undefined) patch.stocks          = JSON.stringify(fields.stocks);
-  if (fields.hs_teams        !== undefined) patch.hs_teams        = JSON.stringify(fields.hs_teams);
+  if (fields.stocks           !== undefined) patch.stocks           = JSON.stringify(fields.stocks);
+  if (fields.hs_teams         !== undefined) patch.hs_teams         = JSON.stringify(fields.hs_teams);
+  if (fields.saved_locations  !== undefined) patch.saved_locations  = JSON.stringify(fields.saved_locations);
 
   stmtUpdate.run({ ...patch, token });
   return parseUser(stmtByToken.get(token));

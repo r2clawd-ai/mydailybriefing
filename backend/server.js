@@ -93,6 +93,27 @@ app.get('/api/geo/zip/:zip', async (req, res) => {
   }
 });
 
+// GET /api/geo/reverse?lat=X&lng=Y  — returns zip/city/state from coordinates
+app.get('/api/geo/reverse', async (req, res) => {
+  try {
+    const { lat, lng } = req.query;
+    if (!lat || !lng) return res.status(400).json({ error: 'lat and lng required' });
+    const r = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10`,
+      { headers: { 'User-Agent': 'MyDailyBriefing/1.0' }, signal: AbortSignal.timeout(6000) }
+    );
+    if (!r.ok) throw new Error('Reverse geocode failed');
+    const data = await r.json();
+    const zip  = data.address?.postcode?.slice(0, 5);
+    const city = data.address?.city || data.address?.town || data.address?.village;
+    const state = data.address?.state;
+    if (!zip) return res.status(400).json({ error: 'Could not determine ZIP from coordinates' });
+    res.json({ zip, city, state });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
 // GET /api/geo/accounts?city=Sioux+Falls&state=SD&interests=Finance,Sports
 app.get('/api/geo/accounts', async (req, res) => {
   try {
@@ -201,32 +222,38 @@ app.put('/api/users/:token/profile', async (req, res) => {
 //  Personalized Briefing
 // ─────────────────────────────────────────────
 
-// GET /api/users/:token/briefing
+// GET /api/users/:token/briefing?zip=XXXXX  (optional zip override for multi-location)
 app.get('/api/users/:token/briefing', async (req, res) => {
   try {
     const { token } = req.params;
-    const cached = getCachedBrief(token);
-    if (cached) {
-      return res.json(cached);
-    }
+    const zipOverride = req.query.zip || null;
+
+    // Cache key includes zip override so each location caches independently
+    const cacheKey = zipOverride ? `${token}:${zipOverride}` : token;
+    const cached = getCachedBrief(cacheKey);
+    if (cached) return res.json(cached);
 
     const user = getUserByToken(token);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    // Resolve geo if not already cached
-    let geoData = {
-      lat: user.lat, lng: user.lng,
-      city: user.city, state: user.state,
-    };
-    if (!geoData.lat && user.zip_code) {
-      try { geoData = await resolveZip(user.zip_code); } catch (_) {}
+    // Resolve geo — use zip override if provided, else user's home zip
+    const activeZip = zipOverride || user.zip_code;
+    let geoData = {};
+    if (zipOverride) {
+      // Always resolve override zip fresh
+      try { geoData = await resolveZip(zipOverride); } catch (_) {}
+    } else {
+      geoData = { lat: user.lat, lng: user.lng, city: user.city, state: user.state };
+      if (!geoData.lat && activeZip) {
+        try { geoData = await resolveZip(activeZip); } catch (_) {}
+      }
     }
 
     // Fetch nwsGrid for weather
     let nwsGrid = null;
     if (geoData.lat && geoData.lng) {
       try {
-        const geo = await resolveZip(user.zip_code);
+        const geo = await resolveZip(activeZip);
         nwsGrid = geo.nwsGrid;
       } catch (_) {}
     }
@@ -311,7 +338,7 @@ app.get('/api/users/:token/briefing', async (req, res) => {
       },
     };
 
-    setCachedBrief(token, payload);
+    setCachedBrief(cacheKey, payload);
     res.json(payload);
   } catch (e) {
     console.error('Briefing error:', e);

@@ -103,6 +103,82 @@
     @keyframes spin { to { transform: rotate(360deg); } }
 
     /* ─── Section pill nav ─── */
+    /* ─── Location switcher ─── */
+    .loc-switcher-wrap {
+      background: rgba(13,13,13,.94);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      overflow-x: hidden;
+    }
+    .loc-switcher {
+      display: flex; gap: 6px; align-items: center;
+      overflow-x: auto; padding: 8px 12px;
+      scrollbar-width: none;
+    }
+    .loc-switcher::-webkit-scrollbar { display: none; }
+    .loc-chip {
+      flex-shrink: 0;
+      padding: 4px 12px;
+      border-radius: 100px;
+      border: 1px solid var(--border);
+      font-size: 12px; font-weight: 500;
+      color: var(--t2); cursor: pointer;
+      transition: all var(--t);
+      white-space: nowrap;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .loc-chip:hover { border-color: var(--b2); color: var(--text); }
+    .loc-chip.active { background: var(--surface); border-color: var(--b2); color: var(--text); font-weight: 700; }
+    .loc-chip.add-loc { border-style: dashed; color: var(--muted); }
+    .loc-chip.add-loc:hover { color: var(--accent); border-color: var(--accent); }
+
+    /* ─── Add location modal ─── */
+    .loc-modal-backdrop {
+      position: fixed; inset: 0; z-index: 500;
+      background: rgba(0,0,0,.7);
+      backdrop-filter: blur(4px);
+      display: flex; align-items: flex-end; justify-content: center;
+    }
+    .loc-modal {
+      background: var(--surface);
+      border: 1px solid var(--b2);
+      border-radius: 20px 20px 0 0;
+      padding: 24px 20px 40px;
+      width: 100%; max-width: 480px;
+    }
+    .loc-modal h3 { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+    .loc-modal-row { display: flex; gap: 8px; margin-bottom: 12px; }
+    .loc-modal input {
+      flex: 1; background: var(--bg);
+      border: 1px solid var(--border); border-radius: 10px;
+      padding: 10px 14px; font-size: 14px; color: var(--text);
+      outline: none;
+    }
+    .loc-modal input:focus { border-color: var(--accent); }
+    .loc-modal-btn {
+      padding: 10px 18px; border-radius: 10px;
+      background: var(--accent); color: #111;
+      font-size: 14px; font-weight: 700;
+      border: none; cursor: pointer; white-space: nowrap;
+    }
+    .loc-modal-geo {
+      width: 100%; padding: 10px; border-radius: 10px;
+      background: var(--s2); border: 1px solid var(--border);
+      color: var(--t2); font-size: 13px; cursor: pointer;
+      margin-bottom: 12px; text-align: center;
+    }
+    .loc-modal-geo:hover { border-color: var(--b2); color: var(--text); }
+    .loc-modal-err { font-size: 12px; color: #ef4444; margin-top: 4px; display: none; }
+    .loc-modal-cancel { font-size: 13px; color: var(--muted); text-align: center; margin-top: 12px; cursor: pointer; }
+    .loc-modal-saved { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px; }
+    .loc-modal-saved-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 0; font-size: 14px; border-bottom: 1px solid var(--border);
+    }
+    .loc-modal-saved-item:last-child { border-bottom: none; }
+    .loc-remove { color: var(--muted); cursor: pointer; font-size: 18px; line-height: 1; padding: 0 4px; }
+    .loc-remove:hover { color: #ef4444; }
+
     .section-nav-wrap {
       background: rgba(13,13,13,.94);
       backdrop-filter: blur(10px);
@@ -700,6 +776,11 @@
   </div>
 </div>
 
+<!-- Location switcher -->
+<div class="loc-switcher-wrap" id="loc-switcher-wrap" style="display:none">
+  <div class="loc-switcher" id="loc-switcher"></div>
+</div>
+
 <!-- Section nav -->
 <div class="section-nav-wrap">
   <div class="section-nav" id="section-nav">
@@ -768,6 +849,7 @@ const API = 'https://motion-questionnaire-congressional-discrimination.trycloudf
 let briefingData = null;
 let profile      = null;
 let a2hsPrompt   = null;
+let activeZip    = null;  // null = user's home zip
 
 // ── PWA a2hs ──────────────────────────────────────────────────────
 window.addEventListener('beforeinstallprompt', e => {
@@ -793,6 +875,133 @@ function a2hsClose() {
 // Register service worker
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+
+// ── Location Switcher ─────────────────────────────────────────────
+function renderLocSwitcher(locations) {
+  const wrap = document.getElementById('loc-switcher-wrap');
+  const strip = document.getElementById('loc-switcher');
+  if (!locations || locations.length < 2) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  strip.innerHTML = '';
+
+  locations.forEach(loc => {
+    const chip = document.createElement('div');
+    const isActive = activeZip ? loc.zip === activeZip : loc.zip === (profile?.zip_code);
+    chip.className = 'loc-chip' + (isActive ? ' active' : '');
+    chip.textContent = loc.label || loc.city || loc.zip;
+    chip.onclick = () => {
+      activeZip = loc.zip === profile?.zip_code ? null : loc.zip;
+      loadBriefing(true);
+    };
+    strip.appendChild(chip);
+  });
+
+  // + Add location chip
+  const add = document.createElement('div');
+  add.className = 'loc-chip add-loc';
+  add.textContent = '+ Add location';
+  add.onclick = openLocModal;
+  strip.appendChild(add);
+}
+
+function openLocModal() {
+  const locs = profile?.saved_locations || [];
+  const modal = document.createElement('div');
+  modal.className = 'loc-modal-backdrop';
+  modal.id = 'loc-modal';
+  modal.innerHTML = `
+    <div class="loc-modal">
+      <h3>📍 Your locations</h3>
+      <button class="loc-modal-geo" onclick="addCurrentLocation()">📡 Use my current location</button>
+      <div class="loc-modal-row">
+        <input id="loc-zip-input" type="text" inputmode="numeric" maxlength="5" placeholder="ZIP code (e.g. 55401)" />
+        <input id="loc-label-input" type="text" maxlength="20" placeholder="Name (e.g. Minneapolis)" style="max-width:140px" />
+        <button class="loc-modal-btn" onclick="submitAddLoc()">Add</button>
+      </div>
+      <div class="loc-modal-err" id="loc-modal-err"></div>
+      ${locs.length ? `
+        <div class="loc-modal-saved">
+          ${locs.map(l => `
+            <div class="loc-modal-saved-item">
+              <span>${l.label || l.city || l.zip} <span style="color:var(--muted);font-size:12px">${l.zip}</span></span>
+              ${l.zip !== profile.zip_code
+                ? `<span class="loc-remove" onclick="removeLoc('${l.zip}')">×</span>`
+                : `<span style="font-size:11px;color:var(--muted)">Home</span>`}
+            </div>`).join('')}
+        </div>` : ''}
+      <div class="loc-modal-cancel" onclick="closeLocModal()">Done</div>
+    </div>`;
+  modal.addEventListener('click', e => { if (e.target === modal) closeLocModal(); });
+  document.body.appendChild(modal);
+  document.getElementById('loc-zip-input')?.focus();
+}
+
+function closeLocModal() {
+  document.getElementById('loc-modal')?.remove();
+}
+
+async function submitAddLoc() {
+  const zip   = document.getElementById('loc-zip-input')?.value.trim();
+  const label = document.getElementById('loc-label-input')?.value.trim();
+  const err   = document.getElementById('loc-modal-err');
+  if (!zip || zip.length !== 5) { err.textContent = 'Enter a valid 5-digit ZIP'; err.style.display = 'block'; return; }
+  err.style.display = 'none';
+
+  // Validate ZIP and get city/state
+  try {
+    const r = await fetch(`${API}/api/geo/zip/${zip}`);
+    if (!r.ok) throw new Error('Invalid ZIP');
+    const geo = await r.json();
+    const newLoc = { zip, label: label || geo.city, city: geo.city, state: geo.state };
+    const locs = [...(profile?.saved_locations || [])];
+    if (locs.find(l => l.zip === zip)) { err.textContent = 'That location is already saved'; err.style.display = 'block'; return; }
+    locs.push(newLoc);
+    await saveLocations(locs);
+    closeLocModal();
+    renderLocSwitcher(locs);
+    showToast(`✅ ${newLoc.label || geo.city} added`);
+  } catch (e) {
+    err.textContent = e.message || 'Could not add location';
+    err.style.display = 'block';
+  }
+}
+
+async function removeLoc(zip) {
+  const locs = (profile?.saved_locations || []).filter(l => l.zip !== zip);
+  await saveLocations(locs);
+  closeLocModal();
+  renderLocSwitcher(locs);
+  showToast('Location removed');
+}
+
+async function saveLocations(locs) {
+  const token = localStorage.getItem('briefing_token');
+  await fetch(`${API}/api/users/${token}/profile`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ saved_locations: locs }),
+  });
+  if (profile) profile.saved_locations = locs;
+}
+
+async function addCurrentLocation() {
+  const btn = document.querySelector('.loc-modal-geo');
+  if (btn) btn.textContent = '📡 Detecting…';
+  try {
+    const pos = await new Promise((res, rej) =>
+      navigator.geolocation.getCurrentPosition(res, rej, { timeout: 10000 })
+    );
+    const { latitude, longitude } = pos.coords;
+    const r = await fetch(`${API}/api/geo/reverse?lat=${latitude}&lng=${longitude}`);
+    if (!r.ok) throw new Error('Could not detect location');
+    const geo = await r.json();
+    document.getElementById('loc-zip-input').value = geo.zip;
+    document.getElementById('loc-label-input').value = geo.city || '';
+    if (btn) btn.textContent = `📍 ${geo.city}, ${geo.state} (${geo.zip})`;
+  } catch (e) {
+    if (btn) btn.textContent = '📡 Could not detect — enter ZIP manually';
+  }
 }
 
 // ── Init ──────────────────────────────────────────────────────────
@@ -949,11 +1158,14 @@ async function loadBriefing(refresh = false) {
   const tick = setInterval(() => { pct = Math.min(pct + 8, 85); bar.style.width = pct + '%'; }, 200);
 
   try {
-    // Parallel: profile + briefing
+    // Parallel: profile + briefing (include zip override if switching locations)
     label && (label.textContent = 'Fetching your data…');
+    const briefingUrl = activeZip
+      ? `${API}/api/users/${token}/briefing?zip=${activeZip}`
+      : `${API}/api/users/${token}/briefing`;
     const [pRes, bRes] = await Promise.all([
       fetch(`${API}/api/users/${token}/profile`),
-      fetch(`${API}/api/users/${token}/briefing`),
+      fetch(briefingUrl),
     ]);
 
     if (pRes.ok) {
@@ -964,6 +1176,7 @@ async function loadBriefing(refresh = false) {
       document.getElementById('s-zip').textContent = profile.zip_code || '—';
       document.getElementById('s-int').textContent = (profile.interests || []).slice(0,3).join(', ') || '—';
       document.getElementById('s-stk').textContent = (profile.stocks || []).slice(0,4).join(', ') || '—';
+      renderLocSwitcher(profile.saved_locations || []);
     }
 
     if (!bRes.ok) throw new Error('Briefing failed');
