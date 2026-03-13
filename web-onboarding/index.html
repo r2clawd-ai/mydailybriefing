@@ -58,12 +58,34 @@
       justify-content: center;
       padding: 32px 24px 48px;
       text-align: center;
-      background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(240,192,64,.12) 0%, transparent 60%);
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(180deg, #0d0d0d 0%, #111111 100%);
+    }
+    .landing::before {
+      content: "";
+      position: absolute;
+      inset: -20%;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(240,192,64,.14), transparent 38%),
+        radial-gradient(circle at 80% 15%, rgba(74,158,255,.12), transparent 34%),
+        radial-gradient(circle at 50% 78%, rgba(77,184,106,.08), transparent 30%);
+      animation: heroGradientShift 8s ease-in-out infinite alternate;
+      pointer-events: none;
+      opacity: .85;
+    }
+    .landing > * {
+      position: relative;
+      z-index: 1;
     }
     .logo-mark {
       font-size: 42px;
       margin-bottom: 20px;
       filter: drop-shadow(0 0 24px rgba(240,192,64,.4));
+    }
+    @keyframes heroGradientShift {
+      0% { transform: translate3d(-1.5%, -1%, 0) scale(1); }
+      100% { transform: translate3d(1.5%, 1%, 0) scale(1.05); }
     }
     .landing h1 {
       font-size: clamp(28px, 7vw, 44px);
@@ -757,6 +779,8 @@ async function validateZip(zip) {
     el.textContent = `✓ ${data.city}, ${data.state}`;
     el.className = 'field-confirm';
     document.getElementById('zip-next').disabled = false;
+    // Auto-advance after short delay — no click needed
+    setTimeout(() => nextStep(), 600);
   } catch {
     el.textContent = 'ZIP not found — try another';
     el.className = 'field-error';
@@ -765,15 +789,18 @@ async function validateZip(zip) {
 }
 
 // ── Interests ──
+const DEFAULT_INTERESTS = ['local news', 'weather'];
 function buildInterestChips() {
   const wrap = document.getElementById('interests-chips');
   INTERESTS.forEach(({ label, value }) => {
     const chip = document.createElement('div');
-    chip.className = 'chip';
+    const isDefault = DEFAULT_INTERESTS.includes(value);
+    chip.className = isDefault ? 'chip on' : 'chip';
     chip.textContent = label;
+    if (isDefault && !state.interests.includes(value)) state.interests.push(value);
     chip.onclick = () => {
       chip.classList.toggle('on');
-      if (chip.classList.contains('on')) state.interests.push(value);
+      if (chip.classList.contains('on')) { if (!state.interests.includes(value)) state.interests.push(value); }
       else state.interests = state.interests.filter(v => v !== value);
     };
     wrap.appendChild(chip);

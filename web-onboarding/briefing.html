@@ -175,6 +175,15 @@
 
     /* ─── Sections ─── */
     .section { margin-top: 26px; }
+    .fade-in-up {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 400ms ease, transform 400ms ease;
+    }
+    .fade-in-up.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
     .sec-header {
       display: flex;
       align-items: center;
@@ -475,6 +484,30 @@
       z-index: 200;
     }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #back-top {
+      position: fixed;
+      right: 16px;
+      bottom: 90px;
+      z-index: 100;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(20,20,20,.88);
+      color: #fff;
+      font-size: 18px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 6px 18px rgba(0,0,0,.35);
+      backdrop-filter: blur(10px);
+      transition: opacity var(--t), transform var(--t), border-color var(--t);
+    }
+    #back-top:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
 
     /* ─── Empty / error ─── */
     .empty { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; }
@@ -711,6 +744,7 @@ async function init() {
   setDateMasthead();
   await loadBriefing();
   initSectionNav();
+  syncNavPillsToContent();
   checkSubscription(token);
 }
 
@@ -1105,6 +1139,7 @@ function render(data) {
   }
 
   document.getElementById('content').innerHTML = h;
+  initSectionAnimations();
 }
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -1201,6 +1236,17 @@ function toggleFc(card) {
 }
 
 // ── Section nav (scroll spy) ──────────────────────────────────────
+// Hide nav pills for sections that have no content
+function syncNavPillsToContent() {
+  document.querySelectorAll('.nav-pill[data-target]').forEach(pill => {
+    const section = document.getElementById(pill.dataset.target);
+    if (!section) { pill.style.display = 'none'; return; }
+    // Section is empty if it only has a sec-header and nothing else meaningful
+    const cards = section.querySelectorAll('.news-card, .mkt-card, .weather-card, .rep-card, .obit-card, .school-card, .community-card');
+    if (cards.length === 0) pill.style.display = 'none';
+  });
+}
+
 function initSectionNav() {
   const pills = document.querySelectorAll('.nav-pill');
   let userScrolling = false;
@@ -1270,11 +1316,9 @@ function showToast(msg, ms=2500) {
 
 // ── Settings ────────────────────────────────────────────────────
 function openSettings() {
-  // Show manage subscription row if user has a subscription
   const token = localStorage.getItem('briefing_token');
-  if (token && window._sub?.isPro) {
-    document.getElementById('manage-sub-row').style.display = '';
-  }
+  const manageRow = document.getElementById('manage-sub-row');
+  manageRow.style.display = token && window._sub?.isActive ? '' : 'none';
   document.getElementById('sheet-bg').classList.add('open');
 }
 function handleSheetBg(e) { if (e.target.id === 'sheet-bg') closeSettings(); }
@@ -1290,18 +1334,9 @@ function manageSubscription() {
 (function() {
   const btn = document.createElement('button');
   btn.id = 'back-top';
-  btn.innerHTML = '↑';
+  btn.type = 'button';
+  btn.textContent = '↑';
   btn.setAttribute('aria-label', 'Back to top');
-  btn.style.cssText = `
-    position:fixed; bottom:90px; right:16px; z-index:100;
-    width:42px; height:42px; border-radius:50%;
-    background:rgba(20,20,20,.85); border:1px solid rgba(255,255,255,.12);
-    color:#fff; font-size:18px; cursor:pointer;
-    display:none; align-items:center; justify-content:center;
-    box-shadow:0 4px 12px rgba(0,0,0,.4);
-    backdrop-filter:blur(8px);
-    transition:opacity .2s, transform .2s;
-  `;
   document.body.appendChild(btn);
   btn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
   window.addEventListener('scroll', () => {
@@ -1310,28 +1345,25 @@ function manageSubscription() {
   }, { passive: true });
 })();
 
-// ── Scroll-triggered section fade-ins ────────────────────────────
-(function() {
-  const style = document.createElement('style');
-  style.textContent = `
-    .section { opacity: 0; transform: translateY(18px); transition: opacity .45s ease, transform .45s ease; }
-    .section.visible { opacity: 1; transform: none; }
-  `;
-  document.head.appendChild(style);
+let sectionFadeObserver = null;
+function initSectionAnimations() {
+  if (!sectionFadeObserver) {
+    sectionFadeObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible');
+          sectionFadeObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+  }
 
-  const fadeObs = new IntersectionObserver(entries => {
-    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); fadeObs.unobserve(e.target); } });
-  }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
-
-  // Observe after render (sections are built dynamically)
-  const waitForSections = setInterval(() => {
-    const sections = document.querySelectorAll('.section:not(.visible)');
-    if (sections.length) {
-      sections.forEach(s => fadeObs.observe(s));
-      clearInterval(waitForSections);
-    }
-  }, 300);
-})();
+  document.querySelectorAll('.section').forEach(section => {
+    section.classList.add('fade-in-up');
+    section.classList.remove('is-visible');
+    sectionFadeObserver.observe(section);
+  });
+}
 
 init();
 </script>
