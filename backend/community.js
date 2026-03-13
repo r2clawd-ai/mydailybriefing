@@ -35,6 +35,29 @@ function parseItem(it) {
   };
 }
 
+function cleanObituaryTitle(title = '', source = '') {
+  let cleaned = String(title)
+    .replace(/^obituary\s*[|:-]\s*/i, '')
+    .replace(/^obituaries\s*[|:-]\s*/i, '')
+    .replace(/\s+[|:-]\s+obituary$/i, '')
+    .trim();
+
+  if (source) {
+    const escapedSource = String(source).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    cleaned = cleaned.replace(new RegExp(`\\s*[|:-]\\s*${escapedSource}\\s*$`, 'i'), '').trim();
+  }
+
+  cleaned = cleaned
+    .replace(/\s*[|:-]\s*(funeral home|chapel|mortuary|memorial chapel|memorial park)\b.*$/i, '')
+    .replace(/\s+[|:-]\s+[A-Z][A-Za-z.'& ]{2,50}$/g, '')
+    .replace(/\b(obituary|obit|passed away|memorial service|funeral service)\b/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
+  const nameMatch = cleaned.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z.'-]+){1,4})/);
+  return nameMatch ? nameMatch[1].trim() : cleaned;
+}
+
 // ── Obituaries ────────────────────────────────────────────────────────────────
 // Uses Google News to surface real obituaries from local funeral homes & papers.
 async function getObituaries(city, state) {
@@ -65,9 +88,13 @@ async function getObituaries(city, state) {
       if (!isObit) continue;
 
       seen.add(parsed.title);
+      const headline = cleanObituaryTitle(parsed.title, parsed.source);
+      if (!headline) continue;
       items.push({
         ...parsed,
+        title: headline,
         type: 'obituary',
+        source: parsed.source || 'Google News',
       });
       if (items.length >= 6) break;
     }
