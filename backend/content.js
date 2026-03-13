@@ -185,7 +185,7 @@ function dedupAgainst(incoming, seen, threshold = 0.5) {
 function localNewsScore(item, city, state) {
   const title = (item.title || '').toLowerCase();
   const description = (item.description || '').toLowerCase();
-  const source = (item.source || '').toLowerCase();
+  const source = (typeof item.source === 'string' ? item.source : item.source?.['#text'] || item.source?.title || '').toLowerCase();
   const cityLower = String(city || '').toLowerCase();
   const stateLower = String(state || '').toLowerCase();
   let score = 0;
