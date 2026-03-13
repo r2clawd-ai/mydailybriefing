@@ -620,6 +620,16 @@
     </div>
     <div class="skip-link" onclick="skipEmail()">Skip — continue without email</div>
   </div>
+
+  <!-- Building screen -->
+  <div class="step" id="step-building">
+    <div class="done-state">
+      <div class="done-icon building-spin">⚙️</div>
+      <h2>Building your briefing…</h2>
+      <p>Pulling local news, weather, markets, and more for your area.</p>
+      <div class="build-bar-wrap"><div class="build-bar" id="build-bar"></div></div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -684,7 +694,8 @@ function updateProgress() {
 }
 function showStep(n) {
   document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
-  const el = document.getElementById('step-' + n);
+  const key = (n === 'building') ? 'step-building' : 'step-' + n;
+  const el = document.getElementById(key);
   if (el) el.classList.add('active');
 }
 async function nextStep() {
