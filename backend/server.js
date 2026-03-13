@@ -120,6 +120,7 @@ app.post('/api/users/signup', async (req, res) => {
       celeb_topics     = [],
       twitter_handles  = [],
       stocks           = [],
+      hs_teams         = [],
     } = req.body;
 
     if (!email || !zip_code) {
