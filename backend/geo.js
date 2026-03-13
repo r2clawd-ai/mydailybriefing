@@ -20,13 +20,15 @@ async function resolveZip(zip) {
   }
 
   // 1. Zippopotam.us for lat/lng/city/state
-  const zipRes = await fetch(`https://api.zippopotam.us/us/${encodeURIComponent(key)}`);
+  const zipRes = await fetch(`https://api.zippopotam.us/us/${encodeURIComponent(key)}`,
+    { signal: AbortSignal.timeout(8000) });
   if (!zipRes.ok) {
     throw new Error(`Unknown zip code: ${key}`);
   }
 
   const zipData = await zipRes.json();
-  const place = zipData.places[0];
+  const place = zipData.places?.[0];
+  if (!place) throw new Error(`No place data for zip: ${key}`);
   const city  = place['place name'];
   const state = place['state abbreviation'];
   const lat   = parseFloat(place.latitude);
@@ -37,7 +39,7 @@ async function resolveZip(zip) {
   try {
     const nwsRes = await fetch(
       `https://api.weather.gov/points/${lat},${lng}`,
-      { headers: { 'User-Agent': 'BriefingApp/1.0 contact@example.com' } }
+      { headers: { 'User-Agent': 'BriefingApp/1.0 contact@example.com' }, signal: AbortSignal.timeout(8000) }
     );
     if (nwsRes.ok) {
       const nwsData = await nwsRes.json();

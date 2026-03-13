@@ -720,6 +720,17 @@ function skipEmail() {
   finishSignup();
 }
 
+function animateBuildBar() {
+  const bar = document.getElementById('build-bar');
+  if (!bar) return;
+  let pct = 0;
+  const tick = setInterval(() => {
+    pct = Math.min(pct + (Math.random() * 8 + 2), 92);
+    bar.style.width = pct + '%';
+    if (pct >= 92) clearInterval(tick);
+  }, 300);
+}
+
 function showStep3Error(msg) {
   const el = document.getElementById('step3-error');
   if (el) { el.textContent = msg; el.style.display = 'block'; }
