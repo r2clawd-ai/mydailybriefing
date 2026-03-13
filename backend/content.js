@@ -15,6 +15,30 @@ const GOOGLE_NEWS_RSS = (q) =>
   `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=en-US&gl=US&ceid=US:en`;
 
 const NPR_RSS = 'https://feeds.npr.org/1001/rss.xml';
+const LOCAL_TV_RSS = {
+  AZ: 'https://www.abc15.com/news/region-phoenix-metro/rss',
+  CA: 'https://ktla.com/feed/',
+  CO: 'https://kdvr.com/feed/',
+  FL: 'https://www.local10.com/arc/outboundfeeds/rss/category/news/',
+  GA: 'https://www.11alive.com/feeds/syndication/rss/news/local/',
+  IL: 'https://wgntv.com/feed/',
+  IN: 'https://fox59.com/feed/',
+  MA: 'https://www.wcvb.com/local-news-rss',
+  MD: 'https://www.wbaltv.com/local-news-rss',
+  MI: 'https://www.clickondetroit.com/arc/outboundfeeds/rss/category/news/local/',
+  MO: 'https://fox2now.com/feed/',
+  NC: 'https://www.wsoctv.com/rss/local-news',
+  NJ: 'https://newjersey.news12.com/feed',
+  NY: 'https://pix11.com/feed/',
+  OH: 'https://www.cleveland19.com/rss/',
+  PA: 'https://www.cbsnews.com/pittsburgh/latest/rss/main',
+  SD: 'https://www.keloland.com/news/local-news/feed/',
+  TN: 'https://www.wkrn.com/feed/',
+  TX: 'https://www.wfaa.com/feeds/syndication/rss/local/',
+  VA: 'https://www.wtvr.com/news/local-news/rss',
+  WA: 'https://www.king5.com/feeds/syndication/rss/local/',
+  WI: 'https://www.tmj4.com/news/local-news/rss',
+};
 
 async function fetchRSS(url) {
   try {
@@ -42,6 +66,39 @@ function normalizeItem(item) {
     published:   item.pubDate     || item['dc:date'] || '',
     description: item.description ? stripHTML(item.description).slice(0, 200) : '',
   };
+}
+
+function normalizeState(state = '') {
+  const input = String(state).trim();
+  const upper = input.toUpperCase();
+  if (LOCAL_TV_RSS[upper]) return upper;
+
+  const stateMap = {
+    ARIZONA: 'AZ',
+    CALIFORNIA: 'CA',
+    COLORADO: 'CO',
+    FLORIDA: 'FL',
+    GEORGIA: 'GA',
+    ILLINOIS: 'IL',
+    INDIANA: 'IN',
+    MASSACHUSETTS: 'MA',
+    MARYLAND: 'MD',
+    MICHIGAN: 'MI',
+    MISSOURI: 'MO',
+    'NORTH CAROLINA': 'NC',
+    'NEW JERSEY': 'NJ',
+    'NEW YORK': 'NY',
+    OHIO: 'OH',
+    PENNSYLVANIA: 'PA',
+    'SOUTH DAKOTA': 'SD',
+    TENNESSEE: 'TN',
+    TEXAS: 'TX',
+    VIRGINIA: 'VA',
+    WASHINGTON: 'WA',
+    WISCONSIN: 'WI',
+  };
+
+  return stateMap[upper.replace(/\./g, '').replace(/\s+/g, ' ')] || null;
 }
 
 function stripHTML(str) {
@@ -125,6 +182,28 @@ function dedupAgainst(incoming, seen, threshold = 0.5) {
   return incoming.filter(a => !seen.some(s => similarity(s.title, a.title) >= threshold));
 }
 
+function localNewsScore(item, city, state) {
+  const title = (item.title || '').toLowerCase();
+  const description = (item.description || '').toLowerCase();
+  const source = (item.source || '').toLowerCase();
+  const cityLower = String(city || '').toLowerCase();
+  const stateLower = String(state || '').toLowerCase();
+  let score = 0;
+
+  if (item.source_type === 'local_tv') score += 4;
+  if (cityLower && (title.includes(cityLower) || description.includes(cityLower) || source.includes(cityLower))) score += 3;
+  if (stateLower && (title.includes(stateLower) || description.includes(stateLower) || source.includes(stateLower))) score += 1;
+  if (title.includes('breaking')) score += 0.5;
+
+  const published = Date.parse(item.published || '');
+  if (!Number.isNaN(published)) {
+    const ageHours = Math.max(0, (Date.now() - published) / 36e5);
+    score += Math.max(0, 2 - Math.min(ageHours / 12, 2));
+  }
+
+  return score;
+}
+
 // ---------- Public API ----------
 
 /**
@@ -171,13 +250,28 @@ async function getWeather(lat, lng, nwsGrid = null) {
  */
 async function getLocalNews(city, state) {
   try {
-    // Fetch from two queries for coverage, then dedup aggressively
-    const [r1, r2] = await Promise.all([
+    const tvFeed = LOCAL_TV_RSS[normalizeState(state)];
+    const [r1, r2, tvItems] = await Promise.all([
       fetchRSS(GOOGLE_NEWS_RSS(`${city} ${state} news`)).catch(() => []),
       fetchRSS(GOOGLE_NEWS_RSS(`${city} ${state} local`)).catch(() => []),
+      tvFeed ? fetchRSS(tvFeed).catch(() => []) : Promise.resolve([]),
     ]);
-    const merged = [...r1, ...r2].map(normalizeItem);
-    return dedup(merged, 0.45).slice(0, 6);
+
+    const normalizedGoogle = [...r1, ...r2].map(normalizeItem).map(item => ({
+      ...item,
+      source_type: 'google_news',
+    }));
+    const normalizedTv = tvItems.map(normalizeItem).map(item => ({
+      ...item,
+      source_type: 'local_tv',
+      source: item.source || tvFeed,
+    }));
+
+    const merged = dedup([...normalizedTv, ...normalizedGoogle], 0.45);
+    return merged
+      .sort((a, b) => localNewsScore(b, city, state) - localNewsScore(a, city, state))
+      .slice(0, 6)
+      .map(({ source_type, ...item }) => item);
   } catch (e) {
     console.warn('Local news error:', e.message);
     return [];
@@ -287,7 +381,7 @@ print(json.dumps(results))
   });
 }
 
-module.exports = { getWeather, getLocalNews, getNationalNews, getSportsNews, getTopicNews, getMarkets, dedupAgainst };
+module.exports = { getWeather, getLocalNews, getNationalNews, getSportsNews, getTopicNews, getMarkets, dedupAgainst, LOCAL_TV_RSS };
 
 /**
  * Generate actionable weather summary line.
