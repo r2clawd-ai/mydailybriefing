@@ -7,8 +7,18 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="description" content="Your personalized morning briefing — local news, weather, markets, politics, and more. Everything that matters, under 2 minutes." />
+  <meta property="og:title" content="My Daily Briefing — Your personalized morning briefing" />
+  <meta property="og:description" content="Local news, weather, markets, politics, and more in one personalized morning briefing." />
+  <meta property="og:image" content="https://mydailybriefing.app/og-image.png" />
+  <meta property="og:url" content="https://mydailybriefing.app/briefing.html" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="My Daily Briefing — Your personalized morning briefing" />
+  <meta name="twitter:description" content="Local news, weather, markets, politics, and more in one personalized morning briefing." />
+  <meta name="twitter:image" content="https://mydailybriefing.app/og-image.png" />
+  <link rel="canonical" href="https://mydailybriefing.app/briefing.html" />
   <link rel="manifest" href="/manifest.json" />
-  <title>My Daily Briefing</title>
+  <title>My Daily Briefing — Your personalized morning briefing</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -137,8 +147,31 @@
       border-bottom: 1px solid var(--border);
       margin-bottom: 4px;
     }
+    .date-header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
     .date-str { font-size: 11px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
     .greeting-str { font-size: 24px; font-weight: 800; letter-spacing: -.4px; margin-top: 4px; }
+    .share-briefing-btn {
+      border: 1px solid var(--b2);
+      background: var(--surface);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: border-color var(--t), transform var(--t), background var(--t);
+      white-space: nowrap;
+    }
+    .share-briefing-btn:hover {
+      border-color: var(--accent);
+      background: var(--s2);
+      transform: translateY(-1px);
+    }
 
     /* ─── Sections ─── */
     .section { margin-top: 26px; }
@@ -584,7 +617,10 @@
 <!-- Main page -->
 <div class="page">
   <div class="date-header">
-    <div class="date-str" id="date-str"></div>
+    <div class="date-header-top">
+      <div class="date-str" id="date-str"></div>
+      <button class="share-briefing-btn" onclick="share()">Share my briefing</button>
+    </div>
     <div class="greeting-str" id="greeting-str"></div>
   </div>
 
@@ -606,6 +642,7 @@
     <div class="sheet-row"><span class="sheet-label">ZIP Code</span><span class="sheet-val" id="s-zip">—</span></div>
     <div class="sheet-row"><span class="sheet-label">Interests</span><span class="sheet-val" id="s-int">—</span></div>
     <div class="sheet-row"><span class="sheet-label">Stocks</span><span class="sheet-val" id="s-stk">—</span></div>
+    <div class="sheet-row" onclick="share()"><span style="color:var(--accent);cursor:pointer">Share my briefing</span><span>›</span></div>
     <div class="sheet-row" onclick="editPrefs()"><span style="color:var(--accent);cursor:pointer">Edit preferences</span><span>›</span></div>
     <div class="sheet-row" id="manage-sub-row" style="display:none" onclick="manageSubscription()"><span style="color:var(--accent);cursor:pointer">Manage subscription</span><span>›</span></div>
     <div class="sheet-row" onclick="signOut()"><span style="color:var(--red);cursor:pointer">Sign out</span><span></span></div>
@@ -1212,21 +1249,16 @@ function initSectionNav() {
 
 // ── Share ────────────────────────────────────────────────────────
 async function share() {
-  const loc   = document.getElementById('loc-text').textContent;
-  const token = localStorage.getItem('briefing_token') || '';
-  const shareUrl = `https://mydailybriefing.app/?ref=share`;
-  const payload  = {
-    title: 'My Daily Briefing',
-    text: `My personalized morning briefing for ${loc} — local news, weather, markets & more.`,
-    url: shareUrl
-  };
-  if (navigator.share) {
-    try { await navigator.share(payload); return; } catch(e) { if (e.name === 'AbortError') return; }
+  const token = localStorage.getItem('briefing_token');
+  if (!token) {
+    showToast('Could not build share link.');
+    return;
   }
+  const shareUrl = `https://mydailybriefing.app/briefing.html?token=${encodeURIComponent(token)}&ref=share`;
   try {
     await navigator.clipboard.writeText(shareUrl);
-    showToast('🔗 Link copied! Share with someone in your town.');
-  } catch { showToast('Share: ' + shareUrl); }
+    showToast('Link copied!');
+  } catch { showToast(shareUrl); }
 }
 
 function showToast(msg, ms=2500) {
