@@ -180,6 +180,71 @@
     .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
 
     /* Trust strip — clean single line, no checkmarks */
+    /* ─── Spinning Newspaper ─── */
+    .newspaper-stage {
+      perspective: 600px;
+      width: 260px;
+      height: 200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .newspaper-spin {
+      width: 240px;
+      background: #f5f0e8;
+      border: 1px solid #c8b99a;
+      border-radius: 2px;
+      padding: 14px 16px 10px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.5);
+      transform-origin: center center;
+      animation: npSpin 1.8s ease-in-out infinite;
+      will-change: transform;
+    }
+    @keyframes npSpin {
+      0%   { transform: rotateY(-35deg) scale(.85); }
+      25%  { transform: rotateY(0deg)   scale(1);   }
+      50%  { transform: rotateY(35deg)  scale(.85); }
+      75%  { transform: rotateY(0deg)   scale(1);   }
+      100% { transform: rotateY(-35deg) scale(.85); }
+    }
+    .np-head {
+      font-family: 'Georgia', 'Times New Roman', serif;
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: .15em;
+      text-align: center;
+      color: #1a1208;
+      text-transform: uppercase;
+    }
+    .np-rule  { height: 2px; background: #1a1208; margin: 4px 0; }
+    .np-rule:last-of-type { height: 1px; }
+    .np-date  { font-family: 'Georgia', serif; font-size: 9px; color: #4a3c28; text-align: center; letter-spacing: .05em; }
+    .np-headline {
+      font-family: 'Georgia', 'Times New Roman', serif;
+      font-size: 13px;
+      font-weight: 900;
+      color: #1a1208;
+      text-align: center;
+      line-height: 1.25;
+      margin-top: 8px;
+      min-height: 36px;
+      transition: opacity .3s ease;
+    }
+    .np-cols { display: flex; gap: 6px; margin-top: 8px; }
+    .np-col-block {
+      flex: 1;
+      height: 32px;
+      background: repeating-linear-gradient(
+        to bottom,
+        #c8b99a 0px, #c8b99a 2px, transparent 2px, transparent 6px
+      );
+      border-radius: 1px;
+      opacity: .5;
+    }
+    .np-col-tall { height: 44px; }
+    .build-bar-wrap { height: 3px; background: var(--border); border-radius: 2px; }
+    .build-bar { height: 3px; background: var(--accent); border-radius: 2px; width: 0%; transition: width .4s ease; }
+
     .trust-strip {
       margin-top: 28px;
       text-align: center;
@@ -631,14 +696,28 @@
     <div class="skip-link" onclick="skipEmail()">Skip — no email needed</div>
   </div>
 
-  <!-- Building screen -->
-  <div class="step" id="step-building">
-    <div class="done-state">
-      <div class="done-icon building-spin">⚙️</div>
-      <h2>Building your briefing…</h2>
-      <p>Pulling local news, weather, markets, and more for your area.</p>
-      <div class="build-bar-wrap"><div class="build-bar" id="build-bar"></div></div>
+  <!-- Building screen — spinning newspaper -->
+  <div class="step" id="step-building" style="display:none;align-items:center;justify-content:center;min-height:80vh;flex-direction:column;gap:28px">
+    <div class="newspaper-stage">
+      <div class="newspaper-spin" id="newspaper">
+        <div class="np-head">MY DAILY BRIEFING</div>
+        <div class="np-rule"></div>
+        <div class="np-date" id="np-date"></div>
+        <div class="np-rule"></div>
+        <div class="np-headline" id="np-headline">LOCAL MAN STILL DOESN'T KNOW WHAT'S HAPPENING</div>
+        <div class="np-rule" style="margin-top:10px"></div>
+        <div class="np-cols">
+          <div class="np-col-block"></div>
+          <div class="np-col-block"></div>
+          <div class="np-col-block np-col-tall"></div>
+        </div>
+      </div>
     </div>
+    <div style="text-align:center">
+      <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px">Building your briefing…</div>
+      <div style="font-size:12px;color:var(--muted)">Gathering local news, weather &amp; markets</div>
+    </div>
+    <div class="build-bar-wrap" style="width:240px"><div class="build-bar" id="build-bar"></div></div>
   </div>
 </div>
 
@@ -704,10 +783,16 @@ function updateProgress() {
   document.getElementById('progress-bar').style.width = pct + '%';
 }
 function showStep(n) {
-  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.step').forEach(s => {
+    s.classList.remove('active');
+    s.style.display = 'none';
+  });
   const key = (n === 'building') ? 'step-building' : 'step-' + n;
   const el = document.getElementById(key);
-  if (el) el.classList.add('active');
+  if (el) {
+    el.classList.add('active');
+    el.style.display = (n === 'building') ? 'flex' : 'block';
+  }
 }
 async function nextStep() {
   if (step < totalSteps) { step++; showStep(step); updateProgress(); }
@@ -720,15 +805,53 @@ function skipEmail() {
   finishSignup();
 }
 
+const FAKE_HEADLINES = [
+  "LOCAL MAN STILL DOESN'T KNOW WHAT'S HAPPENING",
+  "WEATHER CONTINUES TO OCCUR OUTSIDE, SOURCES CONFIRM",
+  "STOCKS DO THING AGAIN — EXPERTS DIVIDED",
+  "AREA SPORTS TEAM PLAYS GAME IN SHOCKING DEVELOPMENT",
+  "POLITICIANS POLITIC IN UNPRECEDENTED TWIST",
+  "COFFEE PRICES STILL TOO HIGH, MORNING READERS SAY",
+  "BRIEFING TAKES SLIGHTLY TOO LONG, READER GROWS BEARD",
+  "LOCAL ALGORITHM CLAIMS TO KNOW WHAT YOU CARE ABOUT",
+  "MORNING PAPER SHORTAGE BLAMED ON THERE BEING NO MORNING PAPER",
+  "NATION AGREES THINGS ARE A LOT RIGHT NOW",
+  "MAN READS NEWS, FORMS OPINION, TELLS NOBODY",
+  "ECONOMY DOES ECONOMY THINGS FOR ANOTHER CONSECUTIVE DAY",
+];
+
 function animateBuildBar() {
+  // Progress bar
   const bar = document.getElementById('build-bar');
-  if (!bar) return;
-  let pct = 0;
-  const tick = setInterval(() => {
-    pct = Math.min(pct + (Math.random() * 8 + 2), 92);
-    bar.style.width = pct + '%';
-    if (pct >= 92) clearInterval(tick);
-  }, 300);
+  if (bar) {
+    let pct = 0;
+    const tick = setInterval(() => {
+      pct = Math.min(pct + (Math.random() * 7 + 3), 92);
+      bar.style.width = pct + '%';
+      if (pct >= 92) clearInterval(tick);
+    }, 350);
+  }
+
+  // Set newspaper date
+  const dateEl = document.getElementById('np-date');
+  if (dateEl) {
+    const d = new Date();
+    dateEl.textContent = d.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' }).toUpperCase();
+  }
+
+  // Cycle headlines
+  const headEl = document.getElementById('np-headline');
+  if (!headEl) return;
+  let idx = 0;
+  const cycleHeadline = () => {
+    headEl.style.opacity = '0';
+    setTimeout(() => {
+      idx = (idx + 1) % FAKE_HEADLINES.length;
+      headEl.textContent = FAKE_HEADLINES[idx];
+      headEl.style.opacity = '1';
+    }, 300);
+  };
+  setInterval(cycleHeadline, 2000);
 }
 
 function showStep3Error(msg) {
