@@ -119,8 +119,14 @@
       transition: all var(--t);
       white-space: nowrap;
     }
-    .nav-pill:hover  { color: var(--text); border-color: var(--b2); }
-    .nav-pill.active { background: var(--accent); color: #111; border-color: var(--accent); font-weight: 700; }
+    .nav-pill:hover  { color: var(--text); border-color: rgba(255,255,255,.25); }
+    .nav-pill.active {
+      background: #fff;
+      color: #111;
+      border-color: #fff;
+      font-weight: 700;
+      box-shadow: 0 2px 8px rgba(0,0,0,.35);
+    }
 
     /* ─── Page layout ─── */
     .page { max-width: 680px; margin: 0 auto; padding: 0 14px calc(var(--safe-bot) + 90px); position: relative; z-index: 1; }
@@ -144,25 +150,45 @@
       border-bottom: 1px solid var(--border);
       margin-bottom: 14px;
     }
-    .sec-title  { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; font-weight: 700; color: var(--accent); }
+    .sec-title  { font-size: 12px; text-transform: uppercase; letter-spacing: .1em; font-weight: 800; color: var(--accent); }
     .sec-meta   { font-size: 11px; color: var(--muted); }
+    /* Section accent borders */
+    #sec-local .news-card    { border-left: 3px solid #3b82f6; }
+    #sec-national .news-card { border-left: 3px solid #8b5cf6; }
+    #sec-politics .news-card { border-left: 3px solid #ef4444; }
+    #sec-sports .news-card   { border-left: 3px solid #22c55e; }
+    #sec-markets .mkt-card   { border-left: 3px solid #14b8a6; }
+    /* Active nav pill upgrade */
     .sub-label  { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 12px 0 8px; }
 
     /* ─── Weather ─── */
     .weather-card {
-      background: linear-gradient(145deg, var(--surface) 0%, var(--s2) 100%);
-      border: 1px solid var(--b2);
+      background: linear-gradient(145deg, #1a2540 0%, #0f1a30 100%);
+      border: 1px solid rgba(255,255,255,.08);
       border-radius: var(--r);
-      padding: 20px;
+      padding: 24px 20px 18px;
       cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+    .weather-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 80% 20%, rgba(100,160,255,.12) 0%, transparent 60%);
+      pointer-events: none;
     }
     .weather-card:active { opacity: .95; }
     .w-main { display: flex; justify-content: space-between; align-items: flex-start; }
-    .w-temp  { font-size: 56px; font-weight: 800; letter-spacing: -3px; line-height: 1; }
-    .w-unit  { font-size: 24px; font-weight: 400; color: var(--muted); vertical-align: super; font-size: 20px; }
-    .w-icon  { font-size: 52px; filter: drop-shadow(0 2px 8px rgba(0,0,0,.4)); }
-    .w-name  { font-size: 14px; font-weight: 600; color: var(--t2); margin-top: 6px; }
-    .w-desc  { font-size: 13px; color: var(--muted); margin-top: 2px; }
+    .w-temp  { font-size: 72px; font-weight: 900; letter-spacing: -4px; line-height: 1; }
+    .w-unit  { font-size: 28px; font-weight: 300; color: rgba(255,255,255,.5); vertical-align: super; }
+    .w-icon  { font-size: 64px; filter: drop-shadow(0 4px 12px rgba(0,0,0,.5)); margin-top: -4px; }
+    .w-name  { font-size: 18px; font-weight: 600; color: rgba(255,255,255,.9); margin-top: 8px; }
+    .w-desc  { font-size: 13px; color: rgba(255,255,255,.5); margin-top: 3px; }
+    .w-meta-row { display: flex; gap: 16px; margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,.08); }
+    .w-meta-item { display: flex; flex-direction: column; gap: 2px; }
+    .w-meta-label { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: rgba(255,255,255,.35); }
+    .w-meta-value { font-size: 14px; font-weight: 600; color: rgba(255,255,255,.85); }
     .action-box {
       background: rgba(240,192,64,.08);
       border: 1px solid rgba(240,192,64,.2);
@@ -838,10 +864,16 @@ function render(data) {
         <div class="w-main">
           <div>
             <div class="w-temp">${c.temperature}<span class="w-unit">°${c.temperatureUnit}</span></div>
-            <div class="w-name">${c.name}</div>
-            <div class="w-desc">${c.shortForecast}</div>
+            <div class="w-name">${c.shortForecast}</div>
+            <div class="w-desc">${c.name}</div>
           </div>
           <div class="w-icon">${icon}</div>
+        </div>
+        <div class="w-meta-row">
+          ${c.windSpeed ? `<div class="w-meta-item"><div class="w-meta-label">Wind</div><div class="w-meta-value">${c.windSpeed}</div></div>` : ''}
+          ${c.probabilityOfPrecipitation?.value != null ? `<div class="w-meta-item"><div class="w-meta-label">Rain</div><div class="w-meta-value">${c.probabilityOfPrecipitation.value}%</div></div>` : ''}
+          ${c.relativeHumidity?.value != null ? `<div class="w-meta-item"><div class="w-meta-label">Humidity</div><div class="w-meta-value">${c.relativeHumidity.value}%</div></div>` : ''}
+          ${(w.periods||[]).length > 0 ? `<div class="w-meta-item"><div class="w-meta-label">Tonight</div><div class="w-meta-value">${(w.periods[0]||{}).temperature || '—'}°</div></div>` : ''}
         </div>
         ${c.action ? `<div class="action-box">${c.action}</div>` : ''}
         <div class="fc-toggle">
