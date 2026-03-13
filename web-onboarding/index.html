@@ -336,14 +336,9 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* Sprint 1 additions */
     .stocks-addon { margin-top: 24px; border-top: 1px solid var(--border); padding-top: 16px; }
     .stocks-addon-label { font-size: 13px; font-weight: 600; color: var(--t2); text-transform: uppercase; letter-spacing: .06em; }
     .stocks-addon-hint { font-weight: 400; text-transform: none; color: var(--muted); }
-    .build-bar-wrap { width: 100%; height: 6px; background: var(--border); border-radius: 3px; margin-top: 24px; overflow: hidden; }
-    .build-bar { height: 100%; width: 0%; background: var(--accent); border-radius: 3px; transition: width .15s ease; }
-    @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-    .building-spin { display: inline-block; animation: spin-slow 1.5s linear infinite; }
     .loading-text { font-size: 15px; color: var(--t2); }
   </style>
 </head>
@@ -395,7 +390,7 @@
 
 <!-- ── Onboarding ── -->
 <div id="onboarding">
-  <div class="progress-wrap"><div class="progress-bar" id="progress-bar" style="width:14%"></div></div>
+  <div class="progress-wrap"><div class="progress-bar" id="progress-bar" style="width:33.3333%"></div></div>
 
   <!-- Step 1: ZIP -->
   <div class="step active" id="step-1">
@@ -413,12 +408,11 @@
   <div class="step" id="step-2">
     <div class="step-eyebrow">Step 2 of 3</div>
     <h2>What do you care about?</h2>
-    <p class="step-hint">Pick topics for your national feed. We'll also track markets by default.</p>
+    <p class="step-hint">Pick topics and add any extra stocks you want to track.</p>
     <div class="chips" id="interests-chips"></div>
     <div class="stocks-addon">
-      <div class="stocks-addon-label">Stocks to watch <span class="stocks-addon-hint">(optional — space to add)</span></div>
+      <div class="stocks-addon-label">Stocks to watch <span class="stocks-addon-hint">(optional)</span></div>
       <input class="field" id="stocks-input" placeholder="e.g. AAPL TSLA NVDA" style="margin-top:6px" />
-      <div class="chips" id="default-stocks" style="margin-top:8px"></div>
     </div>
     <div class="nav-row">
       <button class="btn-back" onclick="prevStep()">←</button>
@@ -430,24 +424,14 @@
   <!-- Step 3: Email -->
   <div class="step" id="step-3">
     <div class="step-eyebrow">Step 3 of 3</div>
-    <h2>Almost there</h2>
-    <p class="step-hint">Add your email to save your briefing across devices. Completely optional.</p>
+    <h2>Stay in sync</h2>
+    <p class="step-hint">Optional — we'll use this to save your preferences and let you sign in on any device.</p>
     <input class="field" id="email-input" type="email" placeholder="your@email.com" />
     <div class="nav-row">
       <button class="btn-back" onclick="prevStep()">←</button>
-      <button class="btn-next" onclick="finishSignup()">Build my briefing →</button>
+      <button class="btn-next" onclick="finishSignup()">Open my briefing →</button>
     </div>
     <div class="skip-link" onclick="skipEmail()">Skip — continue without email</div>
-  </div>
-
-  <!-- Building screen -->
-  <div class="step" id="step-building">
-    <div class="done-state">
-      <div class="done-icon building-spin">⚙️</div>
-      <h2>Building your briefing…</h2>
-      <p>Pulling local news, weather, markets, and more for your area.</p>
-      <div class="build-bar-wrap"><div class="build-bar" id="build-bar"></div></div>
-    </div>
   </div>
 </div>
 
@@ -486,7 +470,6 @@ let state = {
 // ── Init ──
 document.addEventListener('DOMContentLoaded', () => {
   buildInterestChips();
-  buildDefaultStockChips();
   setupZipInput();
   setupStocksInput();
 
@@ -514,7 +497,7 @@ function updateProgress() {
 }
 function showStep(n) {
   document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
-  const el = document.getElementById('step-' + (n === 'done' ? 'done' : n));
+  const el = document.getElementById('step-' + n);
   if (el) el.classList.add('active');
 }
 async function nextStep() {
@@ -524,47 +507,58 @@ function prevStep() {
   if (step > 1) { step--; showStep(step); updateProgress(); }
 }
 function skipEmail() {
-  state.email = '';
+  state.email = 'anon_' + Date.now() + '@briefing.local';
   finishSignup();
 }
 async function finishSignup() {
-  // Collect stocks from input field
   const stocksVal = document.getElementById('stocks-input')?.value.trim().toUpperCase();
   if (stocksVal) {
-    stocksVal.split(/[\s,]+/).forEach(s => { if (s && !state.stocks.includes(s)) state.stocks.push(s); });
+    stocksVal
+      .split(/[\s,]+/)
+      .map(s => s.replace(/[^A-Z0-9\-]/g, ''))
+      .filter(Boolean)
+      .forEach(s => { if (!state.stocks.includes(s)) state.stocks.push(s); });
   }
   const emailVal = document.getElementById('email-input')?.value.trim();
   if (emailVal) state.email = emailVal;
-
-  // Show building screen
-  showStep('building');
-  animateBuildBar();
+  document.getElementById('loading-overlay').classList.add('show');
 
   try {
-    const email = state.email || `anon_${Date.now()}@briefing.local`;
-    state.email = email;
-    const res = await fetch(`${API}/api/users/signup`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: state.email,
-        zip_code: state.zip,
-        interests: state.interests,
-        sports_teams: [],
-        hs_teams: [],
-        stocks: state.stocks,
-      }),
-    });
-    const data = await res.json();
-    if (data.token) {
+    const existingToken = localStorage.getItem('briefing_token');
+    if (existingToken) {
+      state.token = existingToken;
+      await fetch(`${API}/api/users/${existingToken}/profile`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          interests: state.interests,
+          sports_teams: [],
+          hs_teams: [],
+          stocks: state.stocks,
+        }),
+      });
+    } else {
+      state.email = state.email || `anon_${Date.now()}@briefing.local`;
+      const res = await fetch(`${API}/api/users/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: state.email,
+          zip_code: state.zip,
+          interests: state.interests,
+          sports_teams: [],
+          hs_teams: [],
+          stocks: state.stocks,
+        }),
+      });
+      const data = await res.json();
+      if (!data.token) throw new Error(data.error || 'Signup failed');
       state.token = data.token;
       localStorage.setItem('briefing_token', data.token);
-      // Let build bar finish before redirect
-      setTimeout(() => { location.href = `briefing.html?token=${encodeURIComponent(data.token)}`; }, 900);
-    } else {
-      throw new Error(data.error || 'Signup failed');
     }
+    location.href = `briefing.html?token=${encodeURIComponent(state.token)}`;
   } catch (e) {
+    document.getElementById('loading-overlay').classList.remove('show');
     showStep(3);
     const hint = document.createElement('div');
     hint.style = 'color:var(--red);font-size:13px;margin-top:8px;text-align:center';
@@ -572,16 +566,6 @@ async function finishSignup() {
     document.getElementById('step-3').appendChild(hint);
     setTimeout(() => hint.remove(), 3000);
   }
-}
-function animateBuildBar() {
-  const bar = document.getElementById('build-bar');
-  if (!bar) return;
-  let w = 0;
-  const iv = setInterval(() => {
-    w = Math.min(w + (w < 70 ? 12 : 3), 95);
-    bar.style.width = w + '%';
-    if (w >= 95) clearInterval(iv);
-  }, 120);
 }
 
 // ── ZIP ──
@@ -631,197 +615,26 @@ function buildInterestChips() {
   });
 }
 
-// ── Schools ──
-async function loadSchools() {
-  if (!state.city) return;
-  const list = document.getElementById('schools-list');
-  list.innerHTML = '<div style="color:var(--muted);font-size:14px">Loading…</div>';
-  try {
-    const res  = await fetch(`${API}/api/geo/schools/${encodeURIComponent(state.city)}`);
-    const data = await res.json();
-    const schools = data.schools || [];
-    if (!schools.length) { list.innerHTML = '<div style="color:var(--muted);font-size:14px">No schools found nearby.</div>'; return; }
-    list.innerHTML = '';
-    schools.forEach(s => {
-      const chip = document.createElement('div');
-      chip.className = 'school-chip';
-      chip.innerHTML = `<div>
-        <div class="school-chip-name">${s.name}</div>
-        <div class="school-chip-meta">${s.mascot ? s.mascot + ' · ' : ''}${s.classification}</div>
-      </div>`;
-      chip.onclick = () => {
-        chip.classList.toggle('on');
-        if (chip.classList.contains('on')) state.hs_teams.push(s.name);
-        else state.hs_teams = state.hs_teams.filter(n => n !== s.name);
-      };
-      list.appendChild(chip);
-    });
-  } catch { list.innerHTML = '<div style="color:var(--muted);font-size:14px">Couldn\'t load schools.</div>'; }
-}
-
-// ── Stocks ──
-function buildDefaultStockChips() {
-  const wrap = document.getElementById('default-stocks');
-  DEFAULT_STOCKS.forEach(sym => {
-    const chip = document.createElement('div');
-    chip.className = 'chip on';
-    chip.textContent = sym;
-    chip.onclick = () => {
-      chip.classList.toggle('on');
-      if (chip.classList.contains('on')) { if (!state.stocks.includes(sym)) state.stocks.push(sym); }
-      else state.stocks = state.stocks.filter(s => s !== sym);
-    };
-    wrap.appendChild(chip);
-  });
-}
 function setupStocksInput() {
   const inp = document.getElementById('stocks-input');
+  const commitStocks = () => {
+    inp.value
+      .toUpperCase()
+      .split(/[\s,]+/)
+      .map(s => s.trim().replace(/[^A-Z0-9\-]/g,''))
+      .filter(Boolean)
+      .forEach(sym => {
+        if (!state.stocks.includes(sym)) state.stocks.push(sym);
+      });
+    inp.value = '';
+  };
   inp.addEventListener('keydown', e => {
-    if (e.key === ' ' || e.key === ',') {
+    if (e.key === ' ' || e.key === ',' || e.key === 'Enter') {
       e.preventDefault();
-      const sym = inp.value.trim().toUpperCase().replace(/[^A-Z0-9\-]/g,'');
-      if (sym && !state.stocks.includes(sym)) state.stocks.push(sym);
-      inp.value = '';
+      commitStocks();
     }
   });
-}
-
-// ── Preview ──
-async function loadPreview() {
-  const prev = document.getElementById('briefing-preview');
-  prev.innerHTML = '<div style="color:var(--muted);text-align:center;padding:32px;font-size:14px">Loading your briefing…</div>';
-
-  // Collect extras from fields
-  const teamsVal = document.getElementById('teams-input').value.trim();
-  if (teamsVal) state.sports_teams = teamsVal.split(',').map(s => s.trim()).filter(Boolean);
-  const stocksVal = document.getElementById('stocks-input').value.trim().toUpperCase();
-  if (stocksVal) { stocksVal.split(/[\s,]+/).forEach(s => { if (s && !state.stocks.includes(s)) state.stocks.push(s); }); }
-
-  try {
-    // Create/get token
-    const tok = localStorage.getItem('briefing_token');
-    if (!tok) {
-      const email = document.getElementById('email-input').value.trim() || state.email || `anon_${Date.now()}@briefing.local`;
-      state.email = email;
-      const res = await fetch(`${API}/api/users/signup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: state.email,
-          zip_code: state.zip,
-          interests: state.interests,
-          sports_teams: state.sports_teams,
-          hs_teams: state.hs_teams,
-          stocks: state.stocks,
-        }),
-      });
-      const data = await res.json();
-      if (data.token) { state.token = data.token; localStorage.setItem('briefing_token', data.token); }
-    } else {
-      state.token = tok;
-      // Update profile with latest selections
-      await fetch(`${API}/api/users/${tok}/profile`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ interests: state.interests, sports_teams: state.sports_teams, hs_teams: state.hs_teams, stocks: state.stocks }),
-      });
-    }
-
-    const bRes = await fetch(`${API}/api/users/${state.token}/briefing`);
-    if (!bRes.ok) throw new Error();
-    const briefing = await bRes.json();
-    renderPreview(briefing, prev);
-  } catch (e) {
-    prev.innerHTML = '<div style="color:var(--red);text-align:center;padding:24px;font-size:14px">Couldn\'t load preview. Continue anyway →</div>';
-  }
-}
-
-function renderPreview(briefing, el) {
-  const s = briefing.sections;
-  let html = '';
-
-  // Weather
-  if (s.weather?.current) {
-    const c = s.weather.current;
-    const icon = wIcon(c.shortForecast);
-    html += `<div class="prev-section">
-      <div class="prev-title">🌤 Weather — ${briefing.user?.location || ''}</div>
-      <div class="prev-weather-main">
-        <div>
-          <div class="prev-temp">${c.temperature}<span class="prev-temp-unit">°${c.temperatureUnit}</span></div>
-          <div class="prev-w-name">${c.shortForecast}</div>
-        </div>
-        <div class="prev-w-icon">${icon}</div>
-      </div>
-      ${c.action ? `<div class="prev-action">${c.action}</div>` : ''}
-      <div class="forecast-toggle-row" onclick="togglePrevForecast(this)">
-        <span>7-day forecast</span><span>↓</span>
-      </div>
-      <div class="prev-forecast">
-        ${(s.weather.periods||[]).map(p=>`
-          <div class="prev-fc-row">
-            <span class="prev-fc-day">${p.name}</span>
-            <span class="prev-fc-icon">${wIcon(p.shortForecast)}</span>
-            <span class="prev-fc-desc">${p.shortForecast}</span>
-            <span class="prev-fc-temp">${p.temperature}°${p.temperatureUnit}</span>
-          </div>`).join('')}
-      </div>
-    </div>`;
-  }
-
-  // Markets
-  if (s.markets?.length) {
-    html += `<div class="prev-section"><div class="prev-title">📈 Markets</div>
-      <div class="prev-mkt-grid">`;
-    s.markets.forEach(m => {
-      const pct = m.change_pct || 0;
-      const cls = pct >= 0 ? 'up' : 'down';
-      const arr = pct >= 0 ? '▲' : '▼';
-      const sym = m.symbol.replace('-USD','').replace('^','');
-      const price = sym === 'BTC' || sym === 'ETH'
-        ? '$' + Number(m.price).toLocaleString('en-US',{maximumFractionDigits:0})
-        : m.symbol.startsWith('^') ? Number(m.price).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
-        : '$' + Number(m.price).toFixed(2);
-      html += `<div class="prev-mkt">
-        <div class="prev-mkt-sym">${sym}</div>
-        <div class="prev-mkt-price">${price}</div>
-        <div class="prev-mkt-chg ${cls}">${arr} ${Math.abs(pct).toFixed(2)}%</div>
-      </div>`;
-    });
-    html += `</div></div>`;
-  }
-
-  // Local news
-  if (s.local_news?.length) {
-    html += `<div class="prev-section"><div class="prev-title">📍 Local</div><div class="prev-news">`;
-    s.local_news.slice(0,4).forEach((n,i) => {
-      html += `<div class="prev-news-item" onclick="window.open('${(n.url||'').replace(/'/g,"\\'")}','_blank')">
-        <span class="prev-news-num">${i+1}</span>
-        <div><div class="prev-news-title">${n.title}</div><div class="prev-news-src">${n.source||''}</div></div>
-      </div>`;
-    });
-    html += `</div></div>`;
-  }
-
-  // Reps
-  if (s.politics?.federal_reps?.length) {
-    html += `<div class="prev-section"><div class="prev-title">🏛 Your Reps</div>`;
-    if (s.politics.governor) {
-      html += `<div style="font-size:13px;color:var(--t2);margin-bottom:6px">Governor: <strong style="color:var(--text)">${s.politics.governor.name}</strong></div>`;
-    }
-    s.politics.federal_reps.forEach(r => {
-      html += `<div style="font-size:13px;color:var(--t2);margin-bottom:4px">${r.chamber}: <strong style="color:var(--text)">${r.name}</strong> (${r.party})</div>`;
-    });
-    html += `</div>`;
-  }
-
-  el.innerHTML = html || '<div style="color:var(--muted);text-align:center;padding:20px;font-size:14px">Your briefing is ready.</div>';
-}
-
-function togglePrevForecast(btn) {
-  const fc = btn.nextElementSibling;
-  fc.classList.toggle('open');
-  btn.lastElementChild.textContent = fc.classList.contains('open') ? '↑' : '↓';
+  inp.addEventListener('blur', commitStocks);
 }
 
 function wIcon(f) {
@@ -837,7 +650,6 @@ function wIcon(f) {
   return '🌤️';
 }
 
-// ── Finish (legacy compat) ──
 async function finish() { await finishSignup(); }
 function openBriefing() {
   const token = state.token || localStorage.getItem('briefing_token');
