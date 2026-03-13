@@ -407,6 +407,103 @@
     /* ─── Empty / error ─── */
     .empty { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; }
     .err-btn { display: inline-block; margin-top: 16px; background: var(--accent); color: #111; font-weight: 700; font-size: 14px; padding: 10px 24px; border-radius: 100px; cursor: pointer; border: none; }
+
+  /* ── Paywall ─────────────────────────────── */
+  .pro-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-left: 8px;
+    vertical-align: middle;
+    letter-spacing: .5px;
+  }
+  .paywall-banner {
+    position: sticky;
+    top: 0;
+    z-index: 200;
+    background: linear-gradient(90deg, #1e40af, #2563eb);
+    color: #fff;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+  }
+  .paywall-banner button {
+    background: #fff;
+    color: #1e40af;
+    border: none;
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .paywall-banner .dismiss {
+    background: transparent;
+    color: rgba(255,255,255,.7);
+    padding: 4px;
+    font-size: 16px;
+    margin-left: auto;
+  }
+  #paywall-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.75);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .paywall-modal {
+    background: #fff;
+    border-radius: 20px;
+    padding: 40px 32px;
+    max-width: 420px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 25px 60px rgba(0,0,0,.35);
+  }
+  .paywall-logo { font-size: 48px; margin-bottom: 12px; }
+  .paywall-modal h2 { font-size: 24px; font-weight: 700; margin: 0 0 12px; color: #111; }
+  .paywall-modal p  { color: #555; font-size: 15px; margin: 0 0 20px; line-height: 1.5; }
+  .paywall-price    { margin: 20px 0; }
+  .paywall-price .price  { font-size: 48px; font-weight: 800; color: #111; }
+  .paywall-price .period { font-size: 18px; color: #888; }
+  .paywall-features {
+    list-style: none;
+    padding: 0; margin: 0 0 28px;
+    text-align: left;
+    display: inline-block;
+  }
+  .paywall-features li { padding: 5px 0; color: #333; font-size: 15px; }
+  .paywall-cta {
+    display: block;
+    width: 100%;
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #fff;
+    border: none;
+    border-radius: 14px;
+    padding: 16px;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-bottom: 10px;
+    transition: transform .15s, box-shadow .15s;
+  }
+  .paywall-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(37,99,235,.4); }
+  .paywall-sub-note  { font-size: 12px; color: #aaa; margin: 0 0 16px; }
+  .paywall-dismiss   {
+    background: none; border: none;
+    color: #aaa; font-size: 13px;
+    cursor: pointer; text-decoration: underline;
+  }
   </style>
 </head>
 <body>
@@ -488,7 +585,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const API = 'https://transmit-powers-warehouse-ours.trycloudflare.com';
+const API = 'https://motion-questionnaire-congressional-discrimination.trycloudflare.com';
 
 let briefingData = null;
 let profile      = null;
@@ -526,12 +623,127 @@ async function init() {
   const urlToken = params.get('token');
   if (urlToken) { localStorage.setItem('briefing_token', urlToken); history.replaceState({}, '', location.pathname); }
 
+  // Handle post-checkout redirect
+  if (params.get('subscribed') === '1') {
+    localStorage.setItem('sub_just_subscribed', '1');
+  }
+
   const token = localStorage.getItem('briefing_token');
   if (!token) { location.href = 'index.html'; return; }
 
   setDateMasthead();
   await loadBriefing();
   initSectionNav();
+  checkSubscription(token);
+}
+
+async function checkSubscription(token) {
+  try {
+    const res  = await fetch(`${API}/api/subscription/${token}`);
+    const sub  = await res.json();
+
+    // Store for other UI bits
+    window._sub = sub;
+
+    if (sub.isActive) {
+      // Show "Pro" badge if fully subscribed (not just free trial)
+      if (sub.isPro) {
+        const badge = document.createElement('span');
+        badge.className = 'pro-badge';
+        badge.textContent = '✦ Pro';
+        document.getElementById('greeting-str')?.after(badge);
+      }
+      // Celebrate if just subscribed
+      if (localStorage.getItem('sub_just_subscribed')) {
+        localStorage.removeItem('sub_just_subscribed');
+        showToast('🎉 Welcome to My Daily Briefing Pro!');
+      }
+    } else if (sub.status === 'free_trial') {
+      // Free trial — show subtle countdown
+      const days = sub.trialEnd
+        ? Math.ceil((new Date(sub.trialEnd) - Date.now()) / 86400000)
+        : 0;
+      if (days <= 3 && days > 0) {
+        showPaywallBanner(`Your free trial ends in ${days} day${days === 1 ? '' : 's'}`, token);
+      }
+    } else {
+      // No active subscription — show paywall overlay after briefing loads
+      setTimeout(() => showPaywallOverlay(token), 1500);
+    }
+  } catch (e) {
+    // Silently fail — don't block briefing for subscription check errors
+    console.warn('[sub check]', e.message);
+  }
+}
+
+function showPaywallBanner(message, token) {
+  const b = document.createElement('div');
+  b.className = 'paywall-banner';
+  b.innerHTML = `
+    <span>${message}</span>
+    <button onclick="startCheckout('${token}')">Subscribe – $4.99/mo</button>
+    <button class="dismiss" onclick="this.parentElement.remove()">✕</button>
+  `;
+  document.body.prepend(b);
+}
+
+function showPaywallOverlay(token) {
+  // Only show once per session
+  if (sessionStorage.getItem('paywall_shown')) return;
+  sessionStorage.setItem('paywall_shown', '1');
+
+  const overlay = document.createElement('div');
+  overlay.id = 'paywall-overlay';
+  overlay.innerHTML = `
+    <div class="paywall-modal">
+      <div class="paywall-logo">📰</div>
+      <h2>Your free trial has ended</h2>
+      <p>Subscribe to keep getting your personalized daily briefing — local news, weather, markets, sports, and more.</p>
+      <div class="paywall-price">
+        <span class="price">$4.99</span>
+        <span class="period">/month</span>
+      </div>
+      <ul class="paywall-features">
+        <li>✓ Personalized daily briefing</li>
+        <li>✓ Local news & weather</li>
+        <li>✓ Stock & market updates</li>
+        <li>✓ Sports scores & schedules</li>
+        <li>✓ Cancel anytime</li>
+      </ul>
+      <button class="paywall-cta" onclick="startCheckout('${token}')">Start for $4.99/month</button>
+      <p class="paywall-sub-note">Secure payment via Stripe. Cancel anytime.</p>
+      <button class="paywall-dismiss" onclick="document.getElementById('paywall-overlay').remove()">Continue with limited access</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+async function startCheckout(token) {
+  try {
+    const res  = await fetch(`${API}/api/checkout`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token })
+    });
+    const data = await res.json();
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      showToast('Could not start checkout. Please try again.');
+    }
+  } catch (e) {
+    showToast('Checkout error: ' + e.message);
+  }
+}
+
+async function openPortal(token) {
+  try {
+    const res  = await fetch(`${API}/api/portal/${token}`, { method: 'POST' });
+    const data = await res.json();
+    if (data.url) window.open(data.url, '_blank');
+  } catch (e) {
+    showToast('Could not open billing portal.');
+  }
 }
 
 function setDateMasthead() {

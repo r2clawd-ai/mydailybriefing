@@ -135,4 +135,4 @@ function updateUser(token, fields) {
   return parseUser(stmtByToken.get(token));
 }
 
-module.exports = { createUser, getUserByToken, getUserByEmail, updateUser };
+module.exports = { db, createUser, getUserByToken, getUserByEmail, updateUser };

@@ -10,7 +10,9 @@ const { exec } = require('child_process');
 const fs      = require('fs').promises;
 const path    = require('path');
 
-const db      = require('./db');
+const dbModule = require('./db');
+const db       = dbModule.db;
+const { createUser, getUserByToken, getUserByEmail, updateUser } = dbModule;
 const { resolveZip } = require('./geo');
 const content = require('./content');
 const { getLocalAccounts, getSuggestedNational } = require('./geo-accounts');
@@ -18,6 +20,7 @@ const { getHyperLocal }  = require('./hyper-local');
 const { getPolitics }    = require('./politics');
 const { getHSSports }    = require('./hs-sports');
 const { getCommunity }   = require('./community');
+const payments           = require('./payments');
 
 const app  = express();
 const PORT = process.env.PORT || 3001;
@@ -119,7 +122,7 @@ app.post('/api/users/signup', async (req, res) => {
     }
 
     // Check for duplicate email
-    const existing = db.getUserByEmail(email);
+    const existing = getUserByEmail(email);
     if (existing) {
       return res.status(409).json({ error: 'Email already registered', token: existing.token });
     }
@@ -132,7 +135,7 @@ app.post('/api/users/signup', async (req, res) => {
       console.warn('Geo resolve failed during signup:', e.message);
     }
 
-    const user = db.createUser({
+    const user = createUser({
       email, zip_code,
       city:  geoData.city  || null,
       state: geoData.state || null,
@@ -152,7 +155,7 @@ app.post('/api/users/signup', async (req, res) => {
 
 // GET /api/users/:token/profile
 app.get('/api/users/:token/profile', (req, res) => {
-  const user = db.getUserByToken(req.params.token);
+  const user = getUserByToken(req.params.token);
   if (!user) return res.status(404).json({ error: 'User not found' });
   res.json(user);
 });
@@ -161,7 +164,7 @@ app.get('/api/users/:token/profile', (req, res) => {
 app.put('/api/users/:token/profile', async (req, res) => {
   try {
     const { token } = req.params;
-    const existing  = db.getUserByToken(token);
+    const existing  = getUserByToken(token);
     if (!existing) return res.status(404).json({ error: 'User not found' });
 
     const updates = { ...req.body };
@@ -179,7 +182,7 @@ app.put('/api/users/:token/profile', async (req, res) => {
       }
     }
 
-    const updated = db.updateUser(token, updates);
+    const updated = updateUser(token, updates);
     invalidateCachedBrief(token);
     res.json(updated);
   } catch (e) {
@@ -201,7 +204,7 @@ app.get('/api/users/:token/briefing', async (req, res) => {
       return res.json(cached);
     }
 
-    const user = db.getUserByToken(token);
+    const user = getUserByToken(token);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     // Resolve geo if not already cached
@@ -388,6 +391,67 @@ async function getLegacySection(name) {
   if (!fn) throw new Error(`Unknown section: ${name}`);
   return fn();
 }
+
+// ─────────────────────────────────────────────
+//  Stripe Payment Routes
+// ─────────────────────────────────────────────
+
+// Webhook must use raw body — mount BEFORE express.json()
+app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  try {
+    const result = await payments.handleWebhook(db, req.body, sig);
+    res.json(result);
+  } catch (err) {
+    console.error('[webhook error]', err.message);
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Create checkout session
+app.post('/api/checkout', async (req, res) => {
+  const { token } = req.body;
+  if (!token) return res.status(400).json({ error: 'token required' });
+
+  try {
+    const origin = req.headers.origin || 'https://mydailybriefing.app';
+    const result = await payments.createCheckoutSession(
+      db,
+      token,
+      `${origin}/briefing.html?token=${token}&subscribed=1`,
+      `${origin}/briefing.html?token=${token}`
+    );
+    res.json(result);
+  } catch (err) {
+    console.error('[checkout error]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get subscription status
+app.get('/api/subscription/:token', (req, res) => {
+  try {
+    const status = payments.getSubscriptionStatus(db, req.params.token);
+    res.json(status);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Customer portal
+app.post('/api/portal/:token', async (req, res) => {
+  try {
+    const origin = req.headers.origin || 'https://mydailybriefing.app';
+    const result = await payments.createPortalSession(
+      db,
+      req.params.token,
+      `${origin}/briefing.html?token=${req.params.token}`
+    );
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // ─────────────────────────────────────────────
 //  Start
