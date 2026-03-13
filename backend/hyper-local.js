@@ -9,6 +9,7 @@
 const fetch = require('node-fetch');
 const { XMLParser } = require('fast-xml-parser');
 const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+const FETCH_TIMEOUT_MS = 5000;
 
 // ─────────────────────────────────────────────────────────────────
 // CITY → SUBREDDIT MAP
@@ -88,6 +89,100 @@ function getSubreddit(city) {
   return city.toLowerCase().replace(/\s+/g, '');
 }
 
+async function fetchText(url) {
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'BriefingApp/1.0' },
+      timeout: FETCH_TIMEOUT_MS,
+    });
+    if (!res.ok) return null;
+    return await res.text();
+  } catch (e) {
+    console.warn(`Hyper-local fetch failed (${url}):`, e.message);
+    return null;
+  }
+}
+
+async function fetchJSON(url) {
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'BriefingApp/1.0' },
+      timeout: FETCH_TIMEOUT_MS,
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (e) {
+    console.warn(`Hyper-local JSON fetch failed (${url}):`, e.message);
+    return null;
+  }
+}
+
+async function fetchGoogleNewsItems(query, limit = 3, type = 'community') {
+  const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
+  const text = await fetchText(url);
+  if (!text) return [];
+  const parsed = parser.parse(text);
+  const items = parsed?.rss?.channel?.item;
+  const arr = Array.isArray(items) ? items : (items ? [items] : []);
+  return arr.slice(0, limit).map(i => ({
+    title: (i.title || '').replace(/\s*-\s*[^-]{2,40}$/, '').trim(),
+    url: i.link || i.guid || '',
+    source: i.source?.['#text'] || 'Google News',
+    type,
+  }));
+}
+
+function dedupeItems(items, maxItems) {
+  const seen = new Set();
+  return items.filter(i => {
+    const key = `${(i.title || '').toLowerCase().slice(0, 80)}|${i.type}`;
+    if (!i.title || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).slice(0, maxItems);
+}
+
+async function getCitySubredditPosts(city, maxItems = 3) {
+  try {
+    const subreddit = getSubreddit(city);
+    const url = `https://old.reddit.com/r/${encodeURIComponent(subreddit)}/new/.json?limit=${maxItems}`;
+    const data = await fetchJSON(url);
+    const posts = data?.data?.children || [];
+    return posts
+      .map(({ data: post }) => ({
+        title: post.title || '',
+        url: post.url ? (post.url.startsWith('http') ? post.url : `https://old.reddit.com${post.permalink || ''}`) : `https://old.reddit.com${post.permalink || ''}`,
+        source: `r/${subreddit}`,
+        type: 'community',
+      }))
+      .filter(post => post.title);
+  } catch (e) {
+    console.warn(`Reddit fallback failed for ${city}:`, e.message);
+    return [];
+  }
+}
+
+async function getMeetupEvents(city, state, maxItems = 3) {
+  try {
+    const slug = String(city || '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+    const url = `https://www.meetup.com/cities/us/${String(state || '').toLowerCase()}/${slug}/events/rss/`;
+    const text = await fetchText(url);
+    if (!text) return [];
+    const parsed = parser.parse(text);
+    const items = parsed?.rss?.channel?.item;
+    const arr = Array.isArray(items) ? items : (items ? [items] : []);
+    return arr.slice(0, maxItems).map(i => ({
+      title: (i.title || '').replace(/\s*-\s*Meetup\s*$/i, '').trim(),
+      url: i.link || i.guid || '',
+      source: 'Meetup',
+      type: 'event',
+    })).filter(item => item.title);
+  } catch (e) {
+    console.warn(`Meetup RSS failed for ${city}, ${state}:`, e.message);
+    return [];
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────
 // SOURCES
 // ─────────────────────────────────────────────────────────────────
@@ -99,37 +194,16 @@ function getSubreddit(city) {
  */
 async function getCommunityPulse(city, maxPosts = 5) {
   try {
-    // Search for community discussion angles — what locals care about
     const queries = [
       `"${city}" residents OR community OR neighborhood`,
       `"${city}" opinion OR debate OR controversy`,
+      `"${city}" neighbors OR community`,
+      `"${city}" neighborhood forum OR local discussion`,
     ];
 
-    const allItems = [];
-    for (const q of queries) {
-      const url = `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=en-US&gl=US&ceid=US:en`;
-      const res  = await fetch(url, { headers: { 'User-Agent': 'BriefingApp/1.0' }, timeout: 8000 });
-      if (!res.ok) continue;
-      const text   = await res.text();
-      const parsed = parser.parse(text);
-      const items  = parsed?.rss?.channel?.item;
-      const arr    = Array.isArray(items) ? items : (items ? [items] : []);
-      allItems.push(...arr.slice(0, 3).map(i => ({
-        title:  (i.title || '').replace(/\s*-\s*[^-]{2,40}$/, '').trim(),
-        url:    i.link || i.guid || '',
-        source: i.source?.['#text'] || '',
-        type:   'community',
-      })));
-    }
-
-    // Deduplicate
-    const seen = new Set();
-    return allItems.filter(i => {
-      const key = i.title.toLowerCase().slice(0, 50);
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    }).slice(0, maxPosts);
+    const queryResults = await Promise.all(queries.map(q => fetchGoogleNewsItems(q, 3, 'community')));
+    const reddit = await getCitySubredditPosts(city, 3);
+    return dedupeItems([...queryResults.flat(), ...reddit], maxPosts);
   } catch (e) {
     console.warn(`Community pulse failed for ${city}:`, e.message);
     return [];
@@ -144,33 +218,12 @@ async function getLocalEvents(city, state, maxItems = 5) {
     const queries = [
       `"${city}" events this week`,
       `"${city}" ${state} things to do weekend`,
+      `"${city}" meetup OR neighbors OR community event`,
     ];
 
-    const allItems = [];
-    for (const q of queries) {
-      const url = `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=en-US&gl=US&ceid=US:en`;
-      const res  = await fetch(url, { headers: { 'User-Agent': 'BriefingApp/1.0' }, timeout: 8000 });
-      if (!res.ok) continue;
-      const text   = await res.text();
-      const parsed = parser.parse(text);
-      const items  = parsed?.rss?.channel?.item;
-      const arr    = Array.isArray(items) ? items : (items ? [items] : []);
-      allItems.push(...arr.slice(0, 3).map(i => ({
-        title:  (i.title || '').replace(/\s*-\s*[^-]{2,40}$/, '').trim(),
-        url:    i.link || i.guid || '',
-        source: i.source?.['#text'] || '',
-        type:   'event',
-      })));
-    }
-
-    // Deduplicate
-    const seen = new Set();
-    return allItems.filter(i => {
-      const key = i.title.toLowerCase().slice(0, 50);
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    }).slice(0, maxItems);
+    const queryResults = await Promise.all(queries.map(q => fetchGoogleNewsItems(q, 3, 'event')));
+    const meetup = await getMeetupEvents(city, state, 3);
+    return dedupeItems([...queryResults.flat(), ...meetup], maxItems);
   } catch (e) {
     console.warn(`Local events error for ${city}:`, e.message);
     return [];
@@ -182,21 +235,14 @@ async function getLocalEvents(city, state, maxItems = 5) {
  */
 async function getCivicNews(city, state, maxItems = 4) {
   try {
-    const q = `"${city}" city council OR mayor OR budget OR zoning OR ordinance`;
-    const url = `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=en-US&gl=US&ceid=US:en`;
-    const res  = await fetch(url, { headers: { 'User-Agent': 'BriefingApp/1.0' }, timeout: 8000 });
-    if (!res.ok) return [];
-    const text   = await res.text();
-    const parsed = parser.parse(text);
-    const items  = parsed?.rss?.channel?.item;
-    const arr    = Array.isArray(items) ? items : (items ? [items] : []);
-    return arr.slice(0, maxItems).map(i => ({
-      title:  (i.title || '').replace(/\s*-\s*[^-]{2,40}$/, '').trim(),
-      url:    i.link || i.guid || '',
-      source: i.source?.['#text'] || '',
-      type:   'civic',
-    }));
+    const queries = [
+      `"${city}" city council OR mayor OR budget OR zoning OR ordinance`,
+      `"${city}" neighbors OR community meeting OR public hearing`,
+    ];
+    const results = await Promise.all(queries.map(q => fetchGoogleNewsItems(q, 3, 'civic')));
+    return dedupeItems(results.flat(), maxItems);
   } catch (e) {
+    console.warn(`Civic news error for ${city}:`, e.message);
     return [];
   }
 }
@@ -206,21 +252,14 @@ async function getCivicNews(city, state, maxItems = 4) {
  */
 async function getLocalBusiness(city, state, maxItems = 4) {
   try {
-    const q = `"${city}" new restaurant OR opening OR closing OR business`;
-    const url = `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=en-US&gl=US&ceid=US:en`;
-    const res  = await fetch(url, { headers: { 'User-Agent': 'BriefingApp/1.0' }, timeout: 8000 });
-    if (!res.ok) return [];
-    const text   = await res.text();
-    const parsed = parser.parse(text);
-    const items  = parsed?.rss?.channel?.item;
-    const arr    = Array.isArray(items) ? items : (items ? [items] : []);
-    return arr.slice(0, maxItems).map(i => ({
-      title:  (i.title || '').replace(/\s*-\s*[^-]{2,40}$/, '').trim(),
-      url:    i.link || i.guid || '',
-      source: i.source?.['#text'] || '',
-      type:   'business',
-    }));
+    const queries = [
+      `"${city}" new restaurant OR opening OR closing OR business`,
+      `"${city}" neighbors support local business OR grand opening`,
+    ];
+    const results = await Promise.all(queries.map(q => fetchGoogleNewsItems(q, 3, 'business')));
+    return dedupeItems(results.flat(), maxItems);
   } catch (e) {
+    console.warn(`Local business error for ${city}:`, e.message);
     return [];
   }
 }
@@ -234,7 +273,7 @@ async function getSafetyAlerts(lat, lng) {
   try {
     const res = await fetch(
       `https://api.weather.gov/alerts/active?point=${lat},${lng}`,
-      { headers: { 'User-Agent': 'BriefingApp/1.0' }, timeout: 8000 }
+      { headers: { 'User-Agent': 'BriefingApp/1.0' }, timeout: FETCH_TIMEOUT_MS }
     );
     if (!res.ok) return [];
     const data   = await res.json();
@@ -258,21 +297,14 @@ async function getSafetyAlerts(lat, lng) {
 async function getNeighborhoodNews(city, state, zip) {
   // For now, do a precise city+zip Google News search
   try {
-    const q = `"${city}" ${zip}`;
-    const url = `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=en-US&gl=US&ceid=US:en`;
-    const res  = await fetch(url, { headers: { 'User-Agent': 'BriefingApp/1.0' }, timeout: 8000 });
-    if (!res.ok) return [];
-    const text   = await res.text();
-    const parsed = parser.parse(text);
-    const items  = parsed?.rss?.channel?.item;
-    const arr    = Array.isArray(items) ? items : (items ? [items] : []);
-    return arr.slice(0, 3).map(i => ({
-      title:  (i.title || '').replace(/\s*-\s*[^-]{2,40}$/, '').trim(),
-      url:    i.link || i.guid || '',
-      source: i.source?.['#text'] || '',
-      type:   'neighborhood',
-    }));
+    const queries = [
+      `"${city}" ${zip}`,
+      `"${city}" ${zip} neighbors OR community`,
+    ];
+    const results = await Promise.all(queries.map(q => fetchGoogleNewsItems(q, 3, 'neighborhood')));
+    return dedupeItems(results.flat(), 3);
   } catch (e) {
+    console.warn(`Neighborhood news error for ${city}:`, e.message);
     return [];
   }
 }
