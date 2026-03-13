@@ -24,7 +24,7 @@ const payments           = require('./payments');
 
 const app  = express();
 const PORT = process.env.PORT || 3001;
-const BRIEF_CACHE_TTL_MS = 15 * 60 * 1000;
+const BRIEF_CACHE_TTL_MS = 5 * 60 * 1000; // 5 min — markets need freshness
 const briefingCache = new Map();
 
 function clearExpiredBriefCache() {
@@ -39,6 +39,11 @@ function clearExpiredBriefCache() {
 function getCachedBrief(token) {
   clearExpiredBriefCache();
   const entry = briefingCache.get(token);
+  // Don't serve cache entries with empty markets (stale failure)
+  if (entry && (!entry.payload?.sections?.markets || entry.payload.sections.markets.length === 0)) {
+    briefingCache.delete(token);
+    return null;
+  }
   if (!entry) return null;
   console.log(`[brief-cache] hit for token ${token}`);
   return entry.payload;
@@ -451,6 +456,12 @@ app.post('/api/portal/:token', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// Cache clear + force-refresh
+app.delete('/api/cache/:token', (req, res) => {
+  invalidateCachedBrief(req.params.token);
+  res.json({ cleared: req.params.token });
 });
 
 // ─────────────────────────────────────────────

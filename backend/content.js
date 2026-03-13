@@ -364,7 +364,8 @@ for sym in tickers:
 print(json.dumps(results))
 `.trim();
 
-    exec(`python3 -c '${pyCode.replace(/'/g, `'"'"'`)}'`, { timeout: 30000 }, (err, stdout, stderr) => {
+    const py3 = process.env.PYTHON3_PATH || '/opt/homebrew/bin/python3';
+    exec(`${py3} -c '${pyCode.replace(/'/g, `'"'"'`)}'`, { timeout: 30000 }, (err, stdout, stderr) => {
       if (err) {
         console.warn('Markets subprocess error:', err.message);
         resolve([]);
