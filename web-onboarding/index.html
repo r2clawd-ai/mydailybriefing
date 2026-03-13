@@ -165,33 +165,124 @@
       color: var(--muted);
       letter-spacing: .02em;
     }
-    /* Demo preview strip */
-    .demo-preview-strip {
-      margin-top: 32px;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 14px;
-      cursor: pointer;
-      transition: border-color .2s, background .2s;
+    .beta-note {
+      margin-top: 14px;
+      font-size: 13px;
+      color: var(--accent);
+      letter-spacing: .02em;
     }
-    .demo-preview-strip:hover { border-color: var(--accent); background: rgba(240,192,64,.04); }
-    .demo-preview-label { font-size: 12px; color: var(--accent); font-weight: 600; letter-spacing: .04em; margin-bottom: 10px; }
-    .demo-cards-row { display: flex; gap: 10px; overflow-x: auto; }
-    .demo-mini-card {
-      flex-shrink: 0;
-      display: flex;
+    .preview-showcase {
+      padding: 0 24px 72px;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+    .preview-shell {
+      background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
+      border: 1px solid var(--b2);
+      border-radius: 24px;
+      padding: 28px;
+    }
+    .preview-kicker {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .14em;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    .preview-headline {
+      font-size: clamp(24px, 4vw, 36px);
+      font-weight: 800;
+      letter-spacing: -.04em;
+      max-width: 540px;
+      line-height: 1.1;
+    }
+    .preview-sub {
+      color: var(--t2);
+      font-size: 15px;
+      max-width: 560px;
+      margin-top: 10px;
+    }
+    .preview-grid {
+      display: grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 16px;
+      margin-top: 24px;
+    }
+    .preview-card {
+      background: #111317;
+      border: 1px solid var(--b2);
+      border-radius: 18px;
+      padding: 20px;
+      min-height: 190px;
+    }
+    .preview-card.weather {
+      background: linear-gradient(145deg, #1a2540 0%, #0f1a30 100%);
+    }
+    .preview-card.news {
+      background: linear-gradient(145deg, #171717 0%, #111111 100%);
+    }
+    .preview-card-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    .preview-temp {
+      font-size: 56px;
+      font-weight: 800;
+      letter-spacing: -.06em;
+      line-height: .95;
+    }
+    .preview-cond {
+      font-size: 22px;
+      font-weight: 700;
+      margin-top: 10px;
+    }
+    .preview-mini {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 10px;
-      align-items: center;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px 12px;
-      min-width: 160px;
+      margin-top: 18px;
     }
-    .demo-mini-card.weather-demo { background: linear-gradient(135deg, #1a2540, #0f1a30); border-color: rgba(255,255,255,.1); }
-    .dmc-icon { font-size: 22px; flex-shrink: 0; }
-    .dmc-title { font-size: 13px; font-weight: 600; color: var(--text); }
-    .dmc-sub   { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .preview-mini-box {
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 12px;
+      padding: 10px 12px;
+    }
+    .preview-mini-box span {
+      display: block;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .preview-mini-box strong { font-size: 16px; }
+    .preview-story {
+      border-left: 3px solid #4a9eff;
+      padding-left: 14px;
+      margin-top: 16px;
+    }
+    .preview-story:first-of-type { margin-top: 0; }
+    .preview-story-head {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: #4a9eff;
+      margin-bottom: 6px;
+    }
+    .preview-story-title {
+      font-size: 17px;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+    .preview-story-meta {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
 
     /* ─── Onboarding wrapper ─── */
     #onboarding { display: none; max-width: 560px; margin: 0 auto; padding: 24px 16px 80px; min-height: 100vh; }
@@ -377,6 +468,10 @@
     .stocks-addon-label { font-size: 13px; font-weight: 600; color: var(--t2); text-transform: uppercase; letter-spacing: .06em; }
     .stocks-addon-hint { font-weight: 400; text-transform: none; color: var(--muted); }
     .loading-text { font-size: 15px; color: var(--t2); }
+    @media (max-width: 720px) {
+      .preview-grid { grid-template-columns: 1fr; }
+      .preview-shell { padding: 22px; }
+    }
   </style>
 </head>
 <body>
@@ -390,22 +485,23 @@
 <!-- ── Landing page ── -->
 <div class="landing" id="landing">
   <div class="logo-mark">📰</div>
-  <h1>Stop doomscrolling.<br>Start your day with <em>what matters.</em></h1>
+  <h1>Your town's news,<br><em>built for you.</em> Updated every morning.</h1>
   <p class="landing-sub">
     Your ZIP code. Your reps. Your stocks. Your local news. One clean briefing — every morning, built just for you.
   </p>
 
   <div class="cta-row">
-    <button class="btn-primary" onclick="startOnboarding()">Build my briefing — free →</button>
-    <button class="btn-ghost" onclick="tryDemo()">See a live example ↗</button>
+    <button class="btn-primary" onclick="startOnboarding()">Build my briefing →</button>
+    <button class="btn-ghost" onclick="location.href='https://mydailybriefing.app/briefing.html?token=1aac8456-582b-4fd0-87c7-d0ce1d8c59e1'">See an example</button>
   </div>
+  <div class="beta-note">Join the waitlist — free during beta</div>
 
   <div class="social-proof-row">
-    <div class="proof-item">✓ Free during beta</div>
+    <div class="proof-item">Built around your ZIP code</div>
     <div class="proof-divider">·</div>
-    <div class="proof-item">✓ Under 2 min to set up</div>
+    <div class="proof-item">No two briefings are alike</div>
     <div class="proof-divider">·</div>
-    <div class="proof-item">✓ No app to download</div>
+    <div class="proof-item">One read, every morning</div>
   </div>
 
   <div class="what-you-get">
@@ -422,35 +518,40 @@
     </div>
   </div>
 
-  <div class="demo-preview-strip" onclick="tryDemo()">
-    <div class="demo-preview-label">Live example — Sioux Falls, SD →</div>
-    <div class="demo-cards-row">
-      <div class="demo-mini-card weather-demo">
-        <div class="dmc-icon">🌤</div>
-        <div class="dmc-body">
-          <div class="dmc-title">26°F · Partly Cloudy</div>
-          <div class="dmc-sub">Wind 25–35 mph · Rain 50%</div>
+  <div class="trust-strip">Free · No spam · No download required · Works on any device</div>
+</div>
+
+<section class="preview-showcase">
+  <div class="preview-shell">
+    <div class="preview-kicker">Preview</div>
+    <div class="preview-headline">A morning briefing that looks like a front page, not a feed.</div>
+    <p class="preview-sub">Simple stand-in cards below. The live version swaps in your local weather, your stories, and your market watchlist.</p>
+    <div class="preview-grid">
+      <div class="preview-card weather">
+        <div class="preview-card-label">🌤 Weather</div>
+        <div class="preview-temp">46°</div>
+        <div class="preview-cond">Partly Cloudy</div>
+        <div class="preview-mini">
+          <div class="preview-mini-box"><span>High / Low</span><strong>52° / 34°</strong></div>
+          <div class="preview-mini-box"><span>Feels Like</span><strong>38°</strong></div>
         </div>
       </div>
-      <div class="demo-mini-card">
-        <div class="dmc-icon">📍</div>
-        <div class="dmc-body">
-          <div class="dmc-title">Local News</div>
-          <div class="dmc-sub">6 stories from your area</div>
+      <div class="preview-card news">
+        <div class="preview-card-label">📰 News</div>
+        <div class="preview-story">
+          <div class="preview-story-head">Local</div>
+          <div class="preview-story-title">City council approves downtown redevelopment after a late-night vote</div>
+          <div class="preview-story-meta">KELOLAND · 2h ago</div>
         </div>
-      </div>
-      <div class="demo-mini-card">
-        <div class="dmc-icon">📈</div>
-        <div class="dmc-body">
-          <div class="dmc-title">SPY · QQQ · BTC</div>
-          <div class="dmc-sub">Live market prices</div>
+        <div class="preview-story">
+          <div class="preview-story-head" style="color:#9b8ec4">National</div>
+          <div class="preview-story-title">Markets open higher as inflation cools and Treasury yields slip</div>
+          <div class="preview-story-meta">NPR · 45m ago</div>
         </div>
       </div>
     </div>
   </div>
-
-  <div class="trust-strip">Free during beta · No spam · No download needed · Works on any device</div>
-</div>
+</section>
 
 <!-- ── Onboarding ── -->
 <div id="onboarding">
