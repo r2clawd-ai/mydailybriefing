@@ -554,6 +554,34 @@
     .stocks-addon { margin-top: 24px; border-top: 1px solid var(--border); padding-top: 16px; }
     .stocks-addon-label { font-size: 13px; font-weight: 600; color: var(--t2); text-transform: uppercase; letter-spacing: .06em; }
     .stocks-addon-hint { font-weight: 400; text-transform: none; color: var(--muted); }
+    .go-deeper-row { margin-top: 12px; }
+    .go-deeper-link { font-size: 12px; color: var(--accent); cursor: pointer; font-weight: 600; letter-spacing: .02em; }
+    .go-deeper-link:hover { opacity: .8; }
+    .connect-x-btn {
+      width: 100%; padding: 10px 14px; border-radius: 10px;
+      background: var(--s2); border: 1px solid var(--border);
+      color: var(--muted); font-size: 13px; cursor: not-allowed;
+      display: flex; align-items: center; gap: 8px;
+      text-align: left;
+    }
+    .connect-x-btn span:first-child { font-size: 15px; font-weight: 900; }
+    .coming-soon-tag {
+      margin-left: auto; font-size: 10px; background: var(--border);
+      color: var(--muted); padding: 2px 7px; border-radius: 100px;
+      letter-spacing: .05em; text-transform: uppercase;
+    }
+    .acct-suggest-chip {
+      display: flex; flex-direction: column;
+      padding: 6px 12px; border-radius: 100px;
+      border: 1px solid var(--border); cursor: pointer;
+      transition: all var(--t); background: var(--s2);
+      font-size: 12px; line-height: 1.3;
+    }
+    .acct-suggest-chip:hover { border-color: var(--b2); }
+    .acct-suggest-chip.on { background: var(--accent); border-color: var(--accent); color: #111; }
+    .acct-suggest-name { font-weight: 700; }
+    .acct-suggest-desc { font-size: 10px; color: var(--muted); }
+    .acct-suggest-chip.on .acct-suggest-desc { color: rgba(0,0,0,.6); }
     .loading-text { font-size: 15px; color: var(--t2); }
     @media (max-width: 720px) {
       .preview-grid { grid-template-columns: 1fr; }
@@ -668,11 +696,21 @@
       <input class="field" id="stocks-input" type="text" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" placeholder="e.g. AAPL TSLA NVDA BTC-USD" style="margin-top:6px" />
     </div>
 
-    <div class="stocks-addon" style="margin-top:20px">
-      <div class="stocks-addon-label">X / Twitter accounts <span class="stocks-addon-hint">(optional — follow people you care about)</span></div>
-      <p style="font-size:12px;color:var(--muted);margin:6px 0 8px">Add handles and their posts will be pulled into your briefing.</p>
-      <input class="field" id="twitter-input" type="text" inputmode="url" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="e.g. elonmusk balajis patrick_oshag" style="margin-top:6px" />
-      <div class="chips" id="twitter-chips" style="margin-top:10px"></div>
+    <div class="stocks-addon" id="voices-section" style="margin-top:20px">
+      <div class="stocks-addon-label">Voices to follow <span class="stocks-addon-hint">(optional — pulled into your briefing)</span></div>
+      <p style="font-size:12px;color:var(--muted);margin:6px 0 10px">Based on your interests — tap to add.</p>
+      <div class="chips" id="suggested-account-chips"></div>
+      <div class="chips" id="twitter-chips" style="margin-top:8px"></div>
+      <div class="go-deeper-row">
+        <span class="go-deeper-link" id="go-deeper-toggle" onclick="toggleDeeperMode()">Go deeper →</span>
+      </div>
+      <div id="deeper-panel" style="display:none;margin-top:12px">
+        <input class="field" id="twitter-input" type="text" inputmode="url" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="@handle (space or enter to add)" style="margin-bottom:8px" />
+        <button class="connect-x-btn" disabled title="Coming soon">
+          <span>𝕏</span> Connect X account to import your follows
+          <span class="coming-soon-tag">Soon</span>
+        </button>
+      </div>
     </div>
 
     <div class="nav-row">
@@ -745,6 +783,87 @@ const INTERESTS = [
 
 const DEFAULT_STOCKS = ['SPY','QQQ','BTC-USD','AAPL'];
 
+// Curated X/Twitter voices by interest category
+const SUGGESTED_ACCOUNTS = {
+  'finance': [
+    { handle: 'morganhousel',   name: 'Morgan Housel',    desc: 'Psychology of Money' },
+    { handle: 'patrickoshag',   name: 'Patrick OShag',    desc: 'Invest Like the Best' },
+    { handle: 'elerianm',       name: 'Mohamed El-Erian', desc: 'Chief Economic Advisor' },
+    { handle: 'nickmaggiulli',  name: 'Nick Maggiulli',   desc: 'Of Dollars and Data' },
+    { handle: 'chamath',        name: 'Chamath',          desc: 'Social Capital' },
+  ],
+  'markets': [
+    { handle: 'unusual_whales', name: 'Unusual Whales',   desc: 'Options flow tracker' },
+    { handle: 'zerohedge',      name: 'ZeroHedge',        desc: 'Markets & macro' },
+    { handle: 'stockmktnerd',   name: 'Stock Mkt Nerd',   desc: 'Earnings deep dives' },
+    { handle: 'markets',        name: 'Bloomberg Markets',desc: 'Bloomberg news' },
+  ],
+  'technology': [
+    { handle: 'paulg',          name: 'Paul Graham',      desc: 'YC founder, essays' },
+    { handle: 'sama',           name: 'Sam Altman',       desc: 'OpenAI CEO' },
+    { handle: 'benedictevans',  name: 'Benedict Evans',   desc: 'Tech analyst' },
+    { handle: 'naval',          name: 'Naval',            desc: 'Tech & philosophy' },
+    { handle: 'karpathy',       name: 'Andrej Karpathy',  desc: 'AI researcher' },
+  ],
+  'politics': [
+    { handle: 'axios',          name: 'Axios',            desc: 'Political news' },
+    { handle: 'politico',       name: 'Politico',         desc: 'Politics & policy' },
+    { handle: 'nytpolitics',    name: 'NYT Politics',     desc: 'NY Times political' },
+    { handle: 'jonlemire',      name: 'Jonathan Lemire',  desc: 'POLITICO reporter' },
+  ],
+  'sports': [
+    { handle: 'wojespn',        name: 'Woj',              desc: 'NBA insider' },
+    { handle: 'shamscharania',  name: 'Shams',            desc: 'NBA reporter' },
+    { handle: 'adamschefter',   name: 'Schefter',         desc: 'NFL insider' },
+    { handle: 'rapsheet',       name: 'Ian Rapoport',     desc: 'NFL Network' },
+    { handle: 'ken_rosenthal',  name: 'Ken Rosenthal',    desc: 'MLB reporter' },
+  ],
+  'crypto': [
+    { handle: 'saylor',         name: 'Michael Saylor',   desc: 'Bitcoin evangelist' },
+    { handle: 'aantonop',       name: 'Andreas M.',       desc: 'Bitcoin educator' },
+    { handle: 'naval',          name: 'Naval',            desc: 'Crypto & startups' },
+    { handle: 'punk6529',       name: 'punk6529',         desc: 'NFT & crypto' },
+  ],
+  'philosophy': [
+    { handle: 'dailystoic',     name: 'Daily Stoic',      desc: 'Stoic philosophy' },
+    { handle: 'naval',          name: 'Naval',            desc: 'Life & wisdom' },
+    { handle: 'jordanbpeterson',name: 'Jordan Peterson',  desc: 'Psychology & meaning' },
+    { handle: 'ryanholiday',    name: 'Ryan Holiday',     desc: 'Stoicism & books' },
+  ],
+  'personal finance': [
+    { handle: 'ramit',          name: 'Ramit Sethi',      desc: 'I Will Teach You Rich' },
+    { handle: 'morganhousel',   name: 'Morgan Housel',    desc: 'Psychology of Money' },
+    { handle: 'jlcollinsnh',    name: 'JL Collins',       desc: 'Simple Path to Wealth' },
+  ],
+  'health': [
+    { handle: 'peterattiamd',   name: 'Peter Attia',      desc: 'Longevity & medicine' },
+    { handle: 'hubermanlab',    name: 'Andrew Huberman',  desc: 'Neuroscience & health' },
+    { handle: 'foundmyfitness', name: 'Rhonda Patrick',   desc: 'Nutrition science' },
+  ],
+  'science': [
+    { handle: 'neiltyson',      name: 'Neil deGrasse Tyson', desc: 'Astrophysics' },
+    { handle: 'elonmusk',       name: 'Elon Musk',        desc: 'SpaceX & Tesla' },
+    { handle: 'pbsmediashift',  name: 'PBS Space Time',   desc: 'Physics & cosmology' },
+  ],
+  'climate': [
+    { handle: 'ericnstewart',   name: 'Eric Holthaus',    desc: 'Climate journalist' },
+    { handle: 'katharine_hh',   name: 'Katharine Hayhoe', desc: 'Climate scientist' },
+  ],
+  'real estate': [
+    { handle: 'nickgerli',      name: 'Nick Gerli',       desc: 'Housing market analyst' },
+    { handle: 'calculated_risk',name: 'Calculated Risk',  desc: 'Housing data' },
+  ],
+  'entertainment': [
+    { handle: 'variety',        name: 'Variety',          desc: 'Entertainment news' },
+    { handle: 'thr',            name: 'Hollywood Reporter',desc: 'Industry news' },
+  ],
+  'world news': [
+    { handle: 'bbc_world_news', name: 'BBC World',        desc: 'Global news' },
+    { handle: 'reuters',        name: 'Reuters',          desc: 'Wire service' },
+    { handle: 'nprnews',        name: 'NPR News',         desc: 'Public radio news' },
+  ],
+};
+
 let step = 1;
 const totalSteps = 3;
 let state = {
@@ -759,6 +878,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupZipInput();
   setupStocksInput();
   setupTwitterInput();
+  buildSuggestedAccountChips();
 
   // Check existing token
   const tok = localStorage.getItem('briefing_token');
@@ -991,6 +1111,56 @@ async function validateZip(zip) {
 
 // ── Interests ──
 const DEFAULT_INTERESTS = ['local news', 'weather'];
+function buildSuggestedAccountChips() {
+  const wrap = document.getElementById('suggested-account-chips');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+
+  // Gather unique suggestions based on selected interests
+  const seen = new Set();
+  const suggestions = [];
+  const activeInterests = state.interests.length ? state.interests : ['finance', 'markets', 'world news'];
+  activeInterests.forEach(interest => {
+    (SUGGESTED_ACCOUNTS[interest] || []).forEach(acct => {
+      if (!seen.has(acct.handle)) {
+        seen.add(acct.handle);
+        suggestions.push(acct);
+      }
+    });
+  });
+
+  if (!suggestions.length) {
+    document.getElementById('voices-section').style.display = 'none';
+    return;
+  }
+  document.getElementById('voices-section').style.display = 'block';
+
+  suggestions.slice(0, 8).forEach(acct => {
+    const chip = document.createElement('div');
+    const isOn = state.twitter_handles.includes(acct.handle);
+    chip.className = 'chip acct-suggest-chip' + (isOn ? ' on' : '');
+    chip.innerHTML = `<span class="acct-suggest-name">@${acct.handle}</span><span class="acct-suggest-desc">${acct.desc}</span>`;
+    chip.onclick = () => {
+      chip.classList.toggle('on');
+      if (chip.classList.contains('on')) {
+        if (!state.twitter_handles.includes(acct.handle)) state.twitter_handles.push(acct.handle);
+      } else {
+        state.twitter_handles = state.twitter_handles.filter(h => h !== acct.handle);
+      }
+    };
+    wrap.appendChild(chip);
+  });
+}
+
+function toggleDeeperMode() {
+  const panel = document.getElementById('deeper-panel');
+  const toggle = document.getElementById('go-deeper-toggle');
+  const open = panel.style.display === 'none';
+  panel.style.display = open ? 'block' : 'none';
+  toggle.textContent = open ? '← Less' : 'Go deeper →';
+  if (open) document.getElementById('twitter-input')?.focus();
+}
+
 function buildInterestChips() {
   const wrap = document.getElementById('interests-chips');
   INTERESTS.forEach(({ label, value }) => {
@@ -1003,6 +1173,8 @@ function buildInterestChips() {
       chip.classList.toggle('on');
       if (chip.classList.contains('on')) { if (!state.interests.includes(value)) state.interests.push(value); }
       else state.interests = state.interests.filter(v => v !== value);
+      // Refresh suggested voices whenever interests change
+      buildSuggestedAccountChips();
     };
     wrap.appendChild(chip);
   });

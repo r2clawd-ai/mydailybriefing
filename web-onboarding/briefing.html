@@ -824,6 +824,10 @@
     <div class="sheet-row"><span class="sheet-label">ZIP Code</span><span class="sheet-val" id="s-zip">—</span></div>
     <div class="sheet-row"><span class="sheet-label">Interests</span><span class="sheet-val" id="s-int">—</span></div>
     <div class="sheet-row"><span class="sheet-label">Stocks</span><span class="sheet-val" id="s-stk">—</span></div>
+    <div class="sheet-row" onclick="openSourcesPanel()">
+      <span style="color:var(--accent);cursor:pointer">📡 Voices &amp; Sources</span>
+      <span id="s-voices-count" style="font-size:12px;color:var(--muted)">Tap to customize →</span>
+    </div>
     <div class="sheet-row" onclick="share()"><span style="color:var(--accent);cursor:pointer">Share my briefing</span><span>›</span></div>
     <div class="sheet-row" onclick="editPrefs()"><span style="color:var(--accent);cursor:pointer">Edit preferences</span><span>›</span></div>
     <div class="sheet-row" id="manage-sub-row" style="display:none" onclick="manageSubscription()"><span style="color:var(--accent);cursor:pointer">Manage subscription</span><span>›</span></div>
@@ -1177,6 +1181,7 @@ async function loadBriefing(refresh = false) {
       document.getElementById('s-int').textContent = (profile.interests || []).slice(0,3).join(', ') || '—';
       document.getElementById('s-stk').textContent = (profile.stocks || []).slice(0,4).join(', ') || '—';
       renderLocSwitcher(profile.saved_locations || []);
+      updateVoicesCount();
     }
 
     if (!bRes.ok) throw new Error('Briefing failed');
@@ -1665,6 +1670,122 @@ function handleSheetBg(e) { if (e.target.id === 'sheet-bg') closeSettings(); }
 function closeSettings()  { document.getElementById('sheet-bg').classList.remove('open'); }
 function editPrefs()      { closeSettings(); location.href = 'index.html'; }
 function signOut()        { localStorage.clear(); location.href = 'index.html'; }
+
+// ── Sources & Voices Panel ────────────────────────────────────────
+const BRIEFING_SUGGESTED_ACCOUNTS = {
+  'finance':        [['morganhousel','Morgan Housel','Psychology of Money'],['patrickoshag','Patrick OShag','Invest Like the Best'],['elerianm','El-Erian','Chief Economic Advisor'],['nickmaggiulli','Nick Maggiulli','Of Dollars and Data'],['chamath','Chamath','Social Capital']],
+  'markets':        [['unusual_whales','Unusual Whales','Options flow'],['zerohedge','ZeroHedge','Markets & macro'],['stockmktnerd','Stock Mkt Nerd','Earnings deep dives']],
+  'technology':     [['paulg','Paul Graham','YC founder'],['sama','Sam Altman','OpenAI CEO'],['benedictevans','Benedict Evans','Tech analyst'],['naval','Naval','Tech & philosophy'],['karpathy','Andrej Karpathy','AI researcher']],
+  'politics':       [['axios','Axios','Political news'],['politico','Politico','Policy'],['nytpolitics','NYT Politics','NY Times']],
+  'sports':         [['wojespn','Woj','NBA insider'],['shamscharania','Shams','NBA reporter'],['adamschefter','Schefter','NFL insider'],['rapsheet','Ian Rapoport','NFL Network']],
+  'crypto':         [['saylor','Michael Saylor','Bitcoin'],['aantonop','Andreas M.','Bitcoin ed.'],['punk6529','punk6529','NFT & crypto']],
+  'philosophy':     [['dailystoic','Daily Stoic','Stoic philosophy'],['ryanholiday','Ryan Holiday','Stoicism & books'],['naval','Naval','Life & wisdom']],
+  'personal finance':[['ramit','Ramit Sethi','I Will Teach You Rich'],['morganhousel','Morgan Housel','Psychology of Money']],
+  'health':         [['peterattiamd','Peter Attia','Longevity'],['hubermanlab','Andrew Huberman','Neuroscience']],
+  'science':        [['neiltyson','Neil Tyson','Astrophysics'],['elonmusk','Elon Musk','SpaceX & Tesla']],
+  'world news':     [['bbc_world_news','BBC World','Global news'],['reuters','Reuters','Wire service'],['nprnews','NPR News','Public radio']],
+};
+
+function openSourcesPanel() {
+  closeSettings();
+  const handles = profile?.twitter_handles || [];
+  const interests = profile?.interests || [];
+
+  // Gather suggestions for user's interests
+  const seen = new Set(handles);
+  const suggestions = [];
+  interests.forEach(i => {
+    (BRIEFING_SUGGESTED_ACCOUNTS[i] || []).forEach(([h, name, desc]) => {
+      if (!seen.has(h)) { seen.add(h); suggestions.push({ handle: h, name, desc }); }
+    });
+  });
+
+  const modal = document.createElement('div');
+  modal.className = 'loc-modal-backdrop';
+  modal.id = 'sources-modal';
+  modal.innerHTML = `
+    <div class="loc-modal" style="max-height:80vh;overflow-y:auto">
+      <h3>📡 Voices &amp; Sources</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">People you follow get pulled into your morning briefing.</p>
+
+      ${handles.length ? `
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px">Currently following</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px">
+          ${handles.map(h => `<div class="chip on" style="display:flex;align-items:center;gap:6px">@${h}<span style="opacity:.6;cursor:pointer" onclick="removeVoice('${h}')">×</span></div>`).join('')}
+        </div>` : ''}
+
+      ${suggestions.length ? `
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px">Suggested for you</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px">
+          ${suggestions.slice(0,10).map(a => `
+            <div class="chip" onclick="addVoice('${a.handle}', this)" title="${a.desc}">
+              @${a.handle}
+            </div>`).join('')}
+        </div>` : ''}
+
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px">Add by handle</div>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <input id="sources-handle-input" class="field" type="text" inputmode="url" autocorrect="off" autocapitalize="none" placeholder="@handle" style="flex:1" />
+        <button class="loc-modal-btn" onclick="addVoiceFromInput()">Add</button>
+      </div>
+
+      <button style="width:100%;padding:10px 14px;border-radius:10px;background:var(--s2);border:1px solid var(--border);color:var(--muted);font-size:13px;cursor:not-allowed;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:4px" disabled>
+        𝕏 Connect X account — import your follows
+        <span style="font-size:10px;background:var(--border);padding:2px 7px;border-radius:100px;text-transform:uppercase;letter-spacing:.05em">Soon</span>
+      </button>
+
+      <div class="loc-modal-cancel" onclick="document.getElementById('sources-modal')?.remove()">Done</div>
+    </div>`;
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
+
+async function addVoice(handle, chipEl) {
+  const token = localStorage.getItem('briefing_token');
+  const handles = [...(profile?.twitter_handles || [])];
+  if (handles.includes(handle)) return;
+  handles.push(handle);
+  if (chipEl) { chipEl.classList.add('on'); chipEl.onclick = null; }
+  await fetch(`${API}/api/users/${token}/profile`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ twitter_handles: handles }),
+  });
+  if (profile) profile.twitter_handles = handles;
+  updateVoicesCount();
+  showToast(`@${handle} added`);
+}
+
+async function addVoiceFromInput() {
+  const inp = document.getElementById('sources-handle-input');
+  const raw = inp?.value.trim().replace(/^@/, '').replace(/[^A-Za-z0-9_]/g,'');
+  if (!raw) return;
+  inp.value = '';
+  await addVoice(raw, null);
+  // Rebuild modal
+  document.getElementById('sources-modal')?.remove();
+  openSourcesPanel();
+}
+
+async function removeVoice(handle) {
+  const token = localStorage.getItem('briefing_token');
+  const handles = (profile?.twitter_handles || []).filter(h => h !== handle);
+  await fetch(`${API}/api/users/${token}/profile`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ twitter_handles: handles }),
+  });
+  if (profile) profile.twitter_handles = handles;
+  updateVoicesCount();
+  document.getElementById('sources-modal')?.remove();
+  openSourcesPanel();
+  showToast(`@${handle} removed`);
+}
+
+function updateVoicesCount() {
+  const el = document.getElementById('s-voices-count');
+  if (!el) return;
+  const n = profile?.twitter_handles?.length || 0;
+  el.textContent = n ? `${n} following →` : 'Tap to customize →';
+}
 function manageSubscription() {
   const token = localStorage.getItem('briefing_token');
   if (token) openPortal(token);
