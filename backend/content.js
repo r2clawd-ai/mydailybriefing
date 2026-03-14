@@ -377,8 +377,12 @@ print(json.dumps(results))
         return;
       }
       try {
-        const data = JSON.parse(stdout.trim());
-        resolve(Array.isArray(data) ? data : []);
+        // Replace NaN (invalid JSON from Python) with null before parsing
+        const sanitized = stdout.trim().replace(/:\s*NaN/g, ': null').replace(/:\s*Infinity/g, ': null');
+        const data = JSON.parse(sanitized);
+        // Filter out entries with null price
+        const clean = (Array.isArray(data) ? data : []).filter(d => d.price !== null && d.price !== undefined && !d.error);
+        resolve(clean);
       } catch (parseErr) {
         console.warn('Markets JSON parse error:', parseErr.message, '|', stdout.slice(0, 200));
         resolve([]);

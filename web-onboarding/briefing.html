@@ -1150,12 +1150,13 @@ function setDateMasthead() {
 }
 
 // ── Load ──────────────────────────────────────────────────────────
-async function loadBriefing(refresh = false) {
+async function loadBriefing(refresh = false, _attempt = 1) {
+  const MAX_ATTEMPTS = 3;
   const token = localStorage.getItem('briefing_token');
   const bar   = document.getElementById('load-bar');
   const label = document.getElementById('load-label');
   const rbtn  = document.getElementById('refresh-btn');
-  if (refresh) rbtn.classList.add('spinning');
+  if (refresh && _attempt === 1) rbtn.classList.add('spinning');
 
   // Animate loading bar
   let pct = 0;
@@ -1163,7 +1164,7 @@ async function loadBriefing(refresh = false) {
 
   try {
     // Parallel: profile + briefing (include zip override if switching locations)
-    label && (label.textContent = 'Fetching your data…');
+    label && (label.textContent = _attempt > 1 ? `Retrying… (${_attempt}/${MAX_ATTEMPTS})` : 'Fetching your data…');
     const briefingUrl = activeZip
       ? `${API}/api/users/${token}/briefing?zip=${activeZip}`
       : `${API}/api/users/${token}/briefing`;
@@ -1198,6 +1199,13 @@ async function loadBriefing(refresh = false) {
     render(briefingData);
   } catch (e) {
     clearInterval(tick);
+    // Auto-retry up to MAX_ATTEMPTS before showing error
+    if (_attempt < MAX_ATTEMPTS) {
+      bar.style.width = '0%';
+      label && (label.textContent = `Retrying…`);
+      await new Promise(r => setTimeout(r, 2000 * _attempt));
+      return loadBriefing(refresh, _attempt + 1);
+    }
     document.getElementById('loading-screen')?.remove();
     document.getElementById('content').innerHTML = `
       <div class="empty" style="padding:48px 20px;text-align:center">
@@ -1207,7 +1215,9 @@ async function loadBriefing(refresh = false) {
         <button class="err-btn" onclick="loadBriefing(true)">Try again</button>
       </div>`;
   } finally {
-    rbtn.classList.remove('spinning');
+    if (_attempt >= MAX_ATTEMPTS || document.getElementById('content')?.innerHTML.includes('err-btn') === false) {
+      rbtn.classList.remove('spinning');
+    }
   }
 }
 
