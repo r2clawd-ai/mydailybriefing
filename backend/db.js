@@ -15,6 +15,16 @@ const db = new Database(DB_PATH);
 // Enable WAL for better concurrency
 db.pragma('journal_mode = WAL');
 
+function addColumnIfMissing(columnSql) {
+  try {
+    db.exec(`ALTER TABLE users ADD COLUMN ${columnSql}`);
+  } catch (error) {
+    if (!/duplicate column name/i.test(error.message)) {
+      throw error;
+    }
+  }
+}
+
 // Create users table
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
@@ -29,12 +39,37 @@ db.exec(`
     sports_teams TEXT DEFAULT '[]',
     celeb_topics TEXT DEFAULT '[]',
     twitter_handles TEXT DEFAULT '[]',
+    twitter_access_token TEXT,
+    twitter_refresh_token TEXT,
+    twitter_token_expiry INTEGER,
+    substack_feeds TEXT DEFAULT '[]',
+    is_pro INTEGER DEFAULT 0,
+    pro_expires_at TEXT,
     stocks      TEXT DEFAULT '[]',
     hs_teams    TEXT DEFAULT '[]',
+    saved_locations TEXT DEFAULT '[]',
     created_at  TEXT NOT NULL,
     token       TEXT UNIQUE NOT NULL
   )
 `);
+
+[
+  'twitter_access_token TEXT',
+  'twitter_refresh_token TEXT',
+  'twitter_token_expiry INTEGER',
+  `substack_feeds TEXT DEFAULT '[]'`,
+  'is_pro INTEGER DEFAULT 0',
+  'pro_expires_at TEXT',
+  `saved_locations TEXT DEFAULT '[]'`,
+].forEach(addColumnIfMissing);
+
+function parseJsonArray(value) {
+  try {
+    return JSON.parse(value || '[]');
+  } catch {
+    return [];
+  }
+}
 
 // ---------- Helpers ----------
 
@@ -42,13 +77,15 @@ function parseUser(row) {
   if (!row) return null;
   return {
     ...row,
-    interests:        JSON.parse(row.interests        || '[]'),
-    sports_teams:     JSON.parse(row.sports_teams     || '[]'),
-    celeb_topics:     JSON.parse(row.celeb_topics     || '[]'),
-    twitter_handles:  JSON.parse(row.twitter_handles  || '[]'),
-    stocks:           JSON.parse(row.stocks           || '[]'),
-    hs_teams:         JSON.parse(row.hs_teams         || '[]'),
-    saved_locations:  JSON.parse(row.saved_locations  || '[]'),
+    interests:       parseJsonArray(row.interests),
+    sports_teams:    parseJsonArray(row.sports_teams),
+    celeb_topics:    parseJsonArray(row.celeb_topics),
+    twitter_handles: parseJsonArray(row.twitter_handles),
+    substack_feeds:  parseJsonArray(row.substack_feeds),
+    stocks:          parseJsonArray(row.stocks),
+    hs_teams:        parseJsonArray(row.hs_teams),
+    saved_locations: parseJsonArray(row.saved_locations),
+    is_pro:          Boolean(row.is_pro),
   };
 }
 
@@ -56,10 +93,14 @@ function parseUser(row) {
 
 const stmtInsert = db.prepare(`
   INSERT INTO users (id, email, zip_code, city, state, lat, lng,
-    interests, sports_teams, celeb_topics, twitter_handles, stocks, hs_teams, saved_locations,
+    interests, sports_teams, celeb_topics, twitter_handles,
+    twitter_access_token, twitter_refresh_token, twitter_token_expiry,
+    substack_feeds, is_pro, pro_expires_at, stocks, hs_teams, saved_locations,
     created_at, token)
   VALUES (@id, @email, @zip_code, @city, @state, @lat, @lng,
-    @interests, @sports_teams, @celeb_topics, @twitter_handles, @stocks, @hs_teams, @saved_locations,
+    @interests, @sports_teams, @celeb_topics, @twitter_handles,
+    @twitter_access_token, @twitter_refresh_token, @twitter_token_expiry,
+    @substack_feeds, @is_pro, @pro_expires_at, @stocks, @hs_teams, @saved_locations,
     @created_at, @token)
 `);
 
@@ -73,13 +114,19 @@ const stmtUpdate = db.prepare(`
     state           = COALESCE(@state, state),
     lat             = COALESCE(@lat, lat),
     lng             = COALESCE(@lng, lng),
-    interests        = COALESCE(@interests, interests),
-    sports_teams     = COALESCE(@sports_teams, sports_teams),
-    celeb_topics     = COALESCE(@celeb_topics, celeb_topics),
-    twitter_handles  = COALESCE(@twitter_handles, twitter_handles),
-    stocks           = COALESCE(@stocks, stocks),
-    hs_teams         = COALESCE(@hs_teams, hs_teams),
-    saved_locations  = COALESCE(@saved_locations, saved_locations)
+    interests       = COALESCE(@interests, interests),
+    sports_teams    = COALESCE(@sports_teams, sports_teams),
+    celeb_topics    = COALESCE(@celeb_topics, celeb_topics),
+    twitter_handles = COALESCE(@twitter_handles, twitter_handles),
+    twitter_access_token = COALESCE(@twitter_access_token, twitter_access_token),
+    twitter_refresh_token = COALESCE(@twitter_refresh_token, twitter_refresh_token),
+    twitter_token_expiry = COALESCE(@twitter_token_expiry, twitter_token_expiry),
+    substack_feeds  = COALESCE(@substack_feeds, substack_feeds),
+    is_pro          = COALESCE(@is_pro, is_pro),
+    pro_expires_at  = COALESCE(@pro_expires_at, pro_expires_at),
+    stocks          = COALESCE(@stocks, stocks),
+    hs_teams        = COALESCE(@hs_teams, hs_teams),
+    saved_locations = COALESCE(@saved_locations, saved_locations)
   WHERE token = @token
 `);
 
@@ -87,12 +134,14 @@ const stmtUpdate = db.prepare(`
 
 function createUser({ email, zip_code, city, state, lat, lng,
                        interests = [], sports_teams = [], celeb_topics = [],
-                       twitter_handles = [], stocks = [], hs_teams = [], saved_locations = [] }) {
+                       twitter_handles = [], twitter_access_token = null,
+                       twitter_refresh_token = null, twitter_token_expiry = null,
+                       substack_feeds = [], is_pro = false, pro_expires_at = null,
+                       stocks = [], hs_teams = [], saved_locations = [] }) {
   const id    = uuidv4();
   const token = uuidv4();
   const now   = new Date().toISOString();
 
-  // Auto-add home location to saved_locations if not already present
   const homeLoc = city && state
     ? [{ zip: zip_code, label: 'Home', city, state }]
     : [];
@@ -100,17 +149,23 @@ function createUser({ email, zip_code, city, state, lat, lng,
 
   stmtInsert.run({
     id, email, zip_code,
-    city:             city    || null,
-    state:            state   || null,
-    lat:              lat     || null,
-    lng:              lng     || null,
-    interests:        JSON.stringify(interests),
-    sports_teams:     JSON.stringify(sports_teams),
-    celeb_topics:     JSON.stringify(celeb_topics),
-    twitter_handles:  JSON.stringify(twitter_handles),
-    stocks:           JSON.stringify(stocks),
-    hs_teams:         JSON.stringify(hs_teams),
-    saved_locations:  JSON.stringify(locs),
+    city:            city    || null,
+    state:           state   || null,
+    lat:             lat     || null,
+    lng:             lng     || null,
+    interests:       JSON.stringify(interests),
+    sports_teams:    JSON.stringify(sports_teams),
+    celeb_topics:    JSON.stringify(celeb_topics),
+    twitter_handles: JSON.stringify(twitter_handles),
+    twitter_access_token,
+    twitter_refresh_token,
+    twitter_token_expiry,
+    substack_feeds:  JSON.stringify(substack_feeds),
+    is_pro:          is_pro ? 1 : 0,
+    pro_expires_at,
+    stocks:          JSON.stringify(stocks),
+    hs_teams:        JSON.stringify(hs_teams),
+    saved_locations: JSON.stringify(locs),
     created_at: now,
     token,
   });
@@ -137,9 +192,15 @@ function updateUser(token, fields) {
   if (fields.sports_teams    !== undefined) patch.sports_teams    = JSON.stringify(fields.sports_teams);
   if (fields.celeb_topics    !== undefined) patch.celeb_topics    = JSON.stringify(fields.celeb_topics);
   if (fields.twitter_handles !== undefined) patch.twitter_handles = JSON.stringify(fields.twitter_handles);
-  if (fields.stocks           !== undefined) patch.stocks           = JSON.stringify(fields.stocks);
-  if (fields.hs_teams         !== undefined) patch.hs_teams         = JSON.stringify(fields.hs_teams);
-  if (fields.saved_locations  !== undefined) patch.saved_locations  = JSON.stringify(fields.saved_locations);
+  if (fields.twitter_access_token !== undefined) patch.twitter_access_token = fields.twitter_access_token;
+  if (fields.twitter_refresh_token !== undefined) patch.twitter_refresh_token = fields.twitter_refresh_token;
+  if (fields.twitter_token_expiry !== undefined) patch.twitter_token_expiry = fields.twitter_token_expiry;
+  if (fields.substack_feeds  !== undefined) patch.substack_feeds  = JSON.stringify(fields.substack_feeds);
+  if (fields.is_pro          !== undefined) patch.is_pro          = fields.is_pro ? 1 : 0;
+  if (fields.pro_expires_at  !== undefined) patch.pro_expires_at  = fields.pro_expires_at;
+  if (fields.stocks          !== undefined) patch.stocks          = JSON.stringify(fields.stocks);
+  if (fields.hs_teams        !== undefined) patch.hs_teams        = JSON.stringify(fields.hs_teams);
+  if (fields.saved_locations !== undefined) patch.saved_locations = JSON.stringify(fields.saved_locations);
 
   stmtUpdate.run({ ...patch, token });
   return parseUser(stmtByToken.get(token));
