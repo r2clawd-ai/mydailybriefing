@@ -10,9 +10,7 @@ const { exec } = require('child_process');
 const fs      = require('fs').promises;
 const path    = require('path');
 
-const dbModule = require('./db');
-const db       = dbModule.db;
-const { createUser, getUserByToken, getUserByEmail, updateUser } = dbModule;
+const db      = require('./db');
 const { resolveZip } = require('./geo');
 const content = require('./content');
 const { getLocalAccounts, getSuggestedNational } = require('./geo-accounts');
@@ -20,41 +18,24 @@ const { getHyperLocal }  = require('./hyper-local');
 const { getPolitics }    = require('./politics');
 const { getHSSports }    = require('./hs-sports');
 const { getCommunity }   = require('./community');
-const payments           = require('./payments');
+const { getSocialFeed }        = require('./social');
+const { getTwitterTimeline }   = require('./social-twitter');
+const { getNewsletterFeed }    = require('./social-newsletters');
+const { normalizeFeedUrl }     = require('./social-newsletters');
+const { registerTwitterAuthRoutes } = require('./oauth-twitter');
 
 const app  = express();
 const PORT = process.env.PORT || 3001;
-const BRIEF_CACHE_TTL_MS = 5 * 60 * 1000; // 5 min — markets need freshness
-const briefingCache = new Map();
 
-function clearExpiredBriefCache() {
-  const now = Date.now();
-  for (const [token, entry] of briefingCache.entries()) {
-    if (!entry || now - entry.timestamp > BRIEF_CACHE_TTL_MS) {
-      briefingCache.delete(token);
-    }
+function isUserPro(user) {
+  if (user.is_pro) {
+    if (!user.pro_expires_at) return true;
+    return new Date(user.pro_expires_at) > new Date();
   }
-}
 
-function getCachedBrief(token) {
-  clearExpiredBriefCache();
-  const entry = briefingCache.get(token);
-  // Don't serve cache entries with empty markets (stale failure)
-  if (entry && (!entry.payload?.sections?.markets || entry.payload.sections.markets.length === 0)) {
-    briefingCache.delete(token);
-    return null;
-  }
-  if (!entry) return null;
-  console.log(`[brief-cache] hit for token ${token}`);
-  return entry.payload;
-}
-
-function setCachedBrief(token, payload) {
-  briefingCache.set(token, { payload, timestamp: Date.now() });
-}
-
-function invalidateCachedBrief(token) {
-  briefingCache.delete(token);
+  const trialEnd = new Date(user.created_at);
+  trialEnd.setDate(trialEnd.getDate() + 14);
+  return new Date() < trialEnd;
 }
 
 app.use(cors({
@@ -71,6 +52,7 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json());
+registerTwitterAuthRoutes(app);
 
 // ─────────────────────────────────────────────
 //  Health check
@@ -88,27 +70,6 @@ app.get('/api/geo/zip/:zip', async (req, res) => {
   try {
     const geo = await resolveZip(req.params.zip);
     res.json(geo);
-  } catch (e) {
-    res.status(400).json({ error: e.message });
-  }
-});
-
-// GET /api/geo/reverse?lat=X&lng=Y  — returns zip/city/state from coordinates
-app.get('/api/geo/reverse', async (req, res) => {
-  try {
-    const { lat, lng } = req.query;
-    if (!lat || !lng) return res.status(400).json({ error: 'lat and lng required' });
-    const r = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10`,
-      { headers: { 'User-Agent': 'MyDailyBriefing/1.0' }, signal: AbortSignal.timeout(6000) }
-    );
-    if (!r.ok) throw new Error('Reverse geocode failed');
-    const data = await r.json();
-    const zip  = data.address?.postcode?.slice(0, 5);
-    const city = data.address?.city || data.address?.town || data.address?.village;
-    const state = data.address?.state;
-    if (!zip) return res.status(400).json({ error: 'Could not determine ZIP from coordinates' });
-    res.json({ zip, city, state });
   } catch (e) {
     res.status(400).json({ error: e.message });
   }
@@ -149,7 +110,7 @@ app.post('/api/users/signup', async (req, res) => {
     }
 
     // Check for duplicate email
-    const existing = getUserByEmail(email);
+    const existing = db.getUserByEmail(email);
     if (existing) {
       return res.status(409).json({ error: 'Email already registered', token: existing.token });
     }
@@ -162,7 +123,7 @@ app.post('/api/users/signup', async (req, res) => {
       console.warn('Geo resolve failed during signup:', e.message);
     }
 
-    const user = createUser({
+    const user = db.createUser({
       email, zip_code,
       city:  geoData.city  || null,
       state: geoData.state || null,
@@ -170,8 +131,6 @@ app.post('/api/users/signup', async (req, res) => {
       lng:   geoData.lng   || null,
       interests, sports_teams, celeb_topics, twitter_handles, stocks, hs_teams,
     });
-
-    invalidateCachedBrief(user.token);
 
     res.status(201).json({ userId: user.id, token: user.token, profile: user });
   } catch (e) {
@@ -182,16 +141,64 @@ app.post('/api/users/signup', async (req, res) => {
 
 // GET /api/users/:token/profile
 app.get('/api/users/:token/profile', (req, res) => {
-  const user = getUserByToken(req.params.token);
+  const user = db.getUserByToken(req.params.token);
   if (!user) return res.status(404).json({ error: 'User not found' });
   res.json(user);
+});
+
+// POST /api/users/:token/substack — add a newsletter feed
+app.post('/api/users/:token/substack', (req, res) => {
+  const user = db.getUserByToken(req.params.token);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  const url = normalizeUrl(req.body.url);
+  if (!url) return res.status(400).json({ error: 'Invalid URL' });
+  const feeds = JSON.parse(user.substack_feeds || '[]');
+  if (!feeds.includes(url)) feeds.push(url);
+  db.updateUser(req.params.token, { substack_feeds: JSON.stringify(feeds) });
+  res.json({ substack_feeds: feeds });
+});
+
+// DELETE /api/users/:token/substack — remove a newsletter feed
+app.delete('/api/users/:token/substack', (req, res) => {
+  const user = db.getUserByToken(req.params.token);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  const url = normalizeUrl(req.body.url) || req.body.url;
+  const feeds = JSON.parse(user.substack_feeds || '[]').filter(f => f !== url);
+  db.updateUser(req.params.token, { substack_feeds: JSON.stringify(feeds) });
+  res.json({ substack_feeds: feeds });
+});
+
+// GET /api/users/:token/subscription — Pro status
+app.get('/api/users/:token/subscription', (req, res) => {
+  const user = db.getUserByToken(req.params.token);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  const trialEnd = new Date(user.created_at);
+  trialEnd.setDate(trialEnd.getDate() + 14);
+  const now = new Date();
+  const isTrial = now < trialEnd && !user.is_pro;
+  const isPro = user.is_pro
+    ? (!user.pro_expires_at || new Date(user.pro_expires_at) > now)
+    : isTrial;
+  const trialDaysLeft = isTrial ? Math.max(0, Math.ceil((trialEnd - now) / 86400000)) : 0;
+  res.json({
+    isPro, isTrial, trialDaysLeft,
+    status: isPro ? (isTrial ? 'free_trial' : 'pro') : 'free',
+    isActive: isPro,
+    trialEnd: trialEnd.toISOString(),
+    features: {
+      socialConnected: isPro,
+      unlimitedLocations: isPro,
+      priorityRefresh: isPro,
+      emailDigest: isPro,
+    }
+  });
 });
 
 // PUT /api/users/:token/profile
 app.put('/api/users/:token/profile', async (req, res) => {
   try {
     const { token } = req.params;
-    const existing  = getUserByToken(token);
+    const existing  = db.getUserByToken(token);
     if (!existing) return res.status(404).json({ error: 'User not found' });
 
     const updates = { ...req.body };
@@ -209,8 +216,7 @@ app.put('/api/users/:token/profile', async (req, res) => {
       }
     }
 
-    const updated = updateUser(token, updates);
-    invalidateCachedBrief(token);
+    const updated = db.updateUser(token, updates);
     res.json(updated);
   } catch (e) {
     console.error('Profile update error:', e);
@@ -218,48 +224,92 @@ app.put('/api/users/:token/profile', async (req, res) => {
   }
 });
 
+app.put('/api/users/:token/substack', (req, res) => {
+  try {
+    const user = db.getUserByToken(req.params.token);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const currentFeeds = Array.isArray(user.substack_feeds) ? user.substack_feeds : [];
+    const { url, action = 'add', feeds } = req.body || {};
+
+    let nextFeeds = currentFeeds;
+    if (Array.isArray(feeds)) {
+      nextFeeds = [...new Set(feeds.map(normalizeFeedUrl).filter(Boolean))];
+    } else {
+      const normalized = normalizeFeedUrl(url);
+      if (!normalized) {
+        return res.status(400).json({ error: 'A valid Substack or RSS URL is required' });
+      }
+
+      if (action === 'remove') {
+        nextFeeds = currentFeeds.filter((feedUrl) => feedUrl !== normalized);
+      } else {
+        nextFeeds = [...new Set([...currentFeeds, normalized])];
+      }
+    }
+
+    const updated = db.updateUser(req.params.token, { substack_feeds: nextFeeds });
+    res.json({ substack_feeds: updated.substack_feeds });
+  } catch (error) {
+    console.error('Substack update error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/users/:token/subscription', (req, res) => {
+  const user = db.getUserByToken(req.params.token);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+
+  const trialEnd = new Date(user.created_at);
+  trialEnd.setDate(trialEnd.getDate() + 14);
+  const now = new Date();
+  const proActive = isUserPro(user);
+  const isTrial = !user.is_pro && now < trialEnd;
+  const trialDaysLeft = isTrial
+    ? Math.max(0, Math.ceil((trialEnd.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)))
+    : 0;
+
+  res.json({
+    isPro: proActive,
+    isTrial,
+    trialDaysLeft,
+    features: {
+      socialConnected: Boolean(user.twitter_access_token || (user.substack_feeds || []).length),
+      unlimitedLocations: proActive,
+    },
+  });
+});
+
 // ─────────────────────────────────────────────
 //  Personalized Briefing
 // ─────────────────────────────────────────────
 
-// GET /api/users/:token/briefing?zip=XXXXX  (optional zip override for multi-location)
+// GET /api/users/:token/briefing
 app.get('/api/users/:token/briefing', async (req, res) => {
   try {
-    const { token } = req.params;
-    const zipOverride = req.query.zip || null;
-
-    // Cache key includes zip override so each location caches independently
-    const cacheKey = zipOverride ? `${token}:${zipOverride}` : token;
-    const cached = getCachedBrief(cacheKey);
-    if (cached) return res.json(cached);
-
-    const user = getUserByToken(token);
+    const user = db.getUserByToken(req.params.token);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    // Resolve geo — use zip override if provided, else user's home zip
-    const activeZip = zipOverride || user.zip_code;
-    let geoData = {};
-    if (zipOverride) {
-      // Always resolve override zip fresh
-      try { geoData = await resolveZip(zipOverride); } catch (_) {}
-    } else {
-      geoData = { lat: user.lat, lng: user.lng, city: user.city, state: user.state };
-      if (!geoData.lat && activeZip) {
-        try { geoData = await resolveZip(activeZip); } catch (_) {}
-      }
+    // Resolve geo if not already cached
+    let geoData = {
+      lat: user.lat, lng: user.lng,
+      city: user.city, state: user.state,
+    };
+    if (!geoData.lat && user.zip_code) {
+      try { geoData = await resolveZip(user.zip_code); } catch (_) {}
     }
 
     // Fetch nwsGrid for weather
     let nwsGrid = null;
     if (geoData.lat && geoData.lng) {
       try {
-        const geo = await resolveZip(activeZip);
+        const geo = await resolveZip(user.zip_code);
         nwsGrid = geo.nwsGrid;
       } catch (_) {}
     }
 
     // Fetch all sections in parallel, each fails gracefully
-    const [weather, markets, national_news, local_news, sports, interests_news, local_accounts, hyper_local, politics, hs_sports, community_life, follow_feed] =
+    const [weather, markets, national_news, local_news, sports, interests_news, local_accounts, hyper_local, politics, hs_sports, community_life, social_feed] =
       await Promise.all([
         geoData.lat
           ? content.getWeather(geoData.lat, geoData.lng, nwsGrid).catch(() => null)
@@ -278,9 +328,31 @@ app.get('/api/users/:token/briefing', async (req, res) => {
         getPolitics(user.zip_code, geoData.city, geoData.state).catch(() => ({})),
         getHSSports({ city: geoData.city, state: geoData.state, hs_teams: user.hs_teams || [] }).catch(() => ({})),
         getCommunity({ city: geoData.city, state: geoData.state }).catch(() => ({})),
-        (user.twitter_handles?.length)
-          ? content.getFollowFeed(user.twitter_handles).catch(() => [])
-          : Promise.resolve([]),
+        (async () => {
+          const substackFeeds = Array.isArray(user.substack_feeds) ? user.substack_feeds : [];
+          const [base, tweets, newsletters] = await Promise.all([
+            getSocialFeed(user.twitter_handles || [], user.interests || []).catch(() => ({ items: [] })),
+            user.twitter_access_token
+              ? getTwitterTimeline(req.params.token, { maxResults: 20 }).catch(() => [])
+              : Promise.resolve([]),
+            getNewsletterFeed(substackFeeds).catch(() => []),
+          ]);
+          const allItems = [...tweets, ...newsletters, ...(base.items || [])];
+          // Dedup by title or text so tweet/newsletter items merge cleanly.
+          const seen = new Set();
+          const deduped = allItems.filter(i => {
+            const k = (i.title || i.text || '').toLowerCase().trim();
+            if (!k || seen.has(k)) return false;
+            seen.add(k); return true;
+          });
+          return {
+            items: deduped.slice(0, 30),
+            has_handles: (user.twitter_handles||[]).length > 0,
+            has_twitter_connected: !!user.twitter_access_token,
+            has_newsletters: substackFeeds.length > 0,
+            empty: deduped.length === 0,
+          };
+        })(),
       ]);
 
     // Annotate weather with actionable summary
@@ -290,8 +362,52 @@ app.get('/api/users/:token/briefing', async (req, res) => {
 
     // Cross-section deduplication — remove stories already seen in higher-priority sections
     // Priority: local_news > hyper_local news > interests > national_news
-    const { dedupAgainst } = content;
+    const { dedupAgainst, dedup } = content;
     const localNewsItems = Array.isArray(local_news) ? local_news : [];
+
+    // Deduplicate politics sub-arrays against each other (same story from multiple feeds)
+    if (politics) {
+      const polAllRaw = [
+        ...(politics.governor_news     || []),
+        ...(politics.state_legislature || []),
+        ...(politics.federal_news      || []),
+        ...(politics.county            || []),
+      ];
+      // dedup with a lower threshold (0.35) to catch paraphrased headlines
+      const polDeduped = dedup(polAllRaw, 0.5);
+      // Reassign back — put deduped items into governor_news, clear the rest
+      politics.governor_news     = polDeduped.slice(0, 8);
+      politics.state_legislature = [];
+      politics.federal_news      = [];
+      politics.county            = [];
+    }
+
+    // Deduplicate all hyper_local sub-sections against each other first, then against local_news
+    if (hyper_local) {
+      const hlAllRaw = [
+        ...(hyper_local.civic             || []),
+        ...(hyper_local.local_business    || []),
+        ...(hyper_local.events            || []),
+        ...(hyper_local.community_pulse   || []),
+        ...(hyper_local.neighborhood      || []),
+      ];
+      const hlDeduped = dedup(hlAllRaw, 0.5);
+      // Re-partition back into sections, maintaining relative order
+      const hlSeen = new Set();
+      const repartition = (arr) => arr.filter(item => {
+        const key = (item.title||'').toLowerCase().trim();
+        if (hlSeen.has(key)) return false;
+        // Check if this item survived the cross-dedup
+        const survived = hlDeduped.some(d => d.title === item.title);
+        if (survived) { hlSeen.add(key); return true; }
+        return false;
+      });
+      hyper_local.civic           = repartition(hyper_local.civic           || []);
+      hyper_local.local_business  = repartition(hyper_local.local_business  || []);
+      hyper_local.events          = repartition(hyper_local.events          || []);
+      hyper_local.community_pulse = repartition(hyper_local.community_pulse || []);
+      hyper_local.neighborhood    = repartition(hyper_local.neighborhood    || []);
+    }
 
     // Deduplicate hyper_local news against local_news
     if (hyper_local && Array.isArray(hyper_local.news)) {
@@ -315,7 +431,7 @@ app.get('/api/users/:token/briefing', async (req, res) => {
       localNewsItems
     );
 
-    const payload = {
+    res.json({
       generated_at: new Date().toISOString(),
       user: {
         email:    user.email,
@@ -334,12 +450,9 @@ app.get('/api/users/:token/briefing', async (req, res) => {
         politics,
         hs_sports,
         community_life,
-        follow_feed,
+        social_feed,
       },
-    };
-
-    setCachedBrief(cacheKey, payload);
-    res.json(payload);
+    });
   } catch (e) {
     console.error('Briefing error:', e);
     res.status(500).json({ error: e.message });
@@ -428,73 +541,6 @@ async function getLegacySection(name) {
   if (!fn) throw new Error(`Unknown section: ${name}`);
   return fn();
 }
-
-// ─────────────────────────────────────────────
-//  Stripe Payment Routes
-// ─────────────────────────────────────────────
-
-// Webhook must use raw body — mount BEFORE express.json()
-app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
-  const sig = req.headers['stripe-signature'];
-  try {
-    const result = await payments.handleWebhook(db, req.body, sig);
-    res.json(result);
-  } catch (err) {
-    console.error('[webhook error]', err.message);
-    res.status(400).json({ error: err.message });
-  }
-});
-
-// Create checkout session
-app.post('/api/checkout', async (req, res) => {
-  const { token } = req.body;
-  if (!token) return res.status(400).json({ error: 'token required' });
-
-  try {
-    const origin = req.headers.origin || 'https://mydailybriefing.app';
-    const result = await payments.createCheckoutSession(
-      db,
-      token,
-      `${origin}/briefing.html?token=${token}&subscribed=1`,
-      `${origin}/briefing.html?token=${token}`
-    );
-    res.json(result);
-  } catch (err) {
-    console.error('[checkout error]', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Get subscription status
-app.get('/api/subscription/:token', (req, res) => {
-  try {
-    const status = payments.getSubscriptionStatus(db, req.params.token);
-    res.json(status);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Customer portal
-app.post('/api/portal/:token', async (req, res) => {
-  try {
-    const origin = req.headers.origin || 'https://mydailybriefing.app';
-    const result = await payments.createPortalSession(
-      db,
-      req.params.token,
-      `${origin}/briefing.html?token=${req.params.token}`
-    );
-    res.json(result);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Cache clear + force-refresh
-app.delete('/api/cache/:token', (req, res) => {
-  invalidateCachedBrief(req.params.token);
-  res.json({ cleared: req.params.token });
-});
 
 // ─────────────────────────────────────────────
 //  Start

@@ -103,4 +103,5 @@ async function getNewsletterFeed(substackUrls = []) {
 
 module.exports = {
   getNewsletterFeed,
+  normalizeFeedUrl,
 };
