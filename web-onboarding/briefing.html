@@ -792,6 +792,7 @@
     <div class="nav-pill" data-target="sec-sports">🏆 Sports</div>
     <div class="nav-pill" data-target="sec-community">🏙 Community</div>
     <div class="nav-pill" data-target="sec-life">🕯 Community Life</div>
+    <div class="nav-pill" data-target="sec-social">📡 Social</div>
     <div class="nav-pill" data-target="sec-follow">👤 Follow</div>
   </div>
 </div>
@@ -830,8 +831,69 @@
     </div>
     <div class="sheet-row" onclick="share()"><span style="color:var(--accent);cursor:pointer">Share my briefing</span><span>›</span></div>
     <div class="sheet-row" onclick="editPrefs()"><span style="color:var(--accent);cursor:pointer">Edit preferences</span><span>›</span></div>
+    <div class="sheet-row" onclick="openConnectPanel()">
+      <span style="color:var(--accent);cursor:pointer">🔗 Connected Accounts</span>
+      <span id="s-connected-count" style="font-size:12px;color:var(--muted)">X · Newsletter →</span>
+    </div>
     <div class="sheet-row" id="manage-sub-row" style="display:none" onclick="manageSubscription()"><span style="color:var(--accent);cursor:pointer">Manage subscription</span><span>›</span></div>
+    <div class="sheet-row" onclick="showUpgradeModal()"><span id="upgrade-row-label" style="color:var(--accent);cursor:pointer">⭐ Upgrade to Pro</span><span id="upgrade-row-badge" style="font-size:11px;background:#fbbf24;color:#000;padding:2px 8px;border-radius:99px;font-weight:700">$7.99/mo</span></div>
     <div class="sheet-row" onclick="signOut()"><span style="color:var(--red);cursor:pointer">Sign out</span><span></span></div>
+  </div>
+</div>
+
+<!-- Connected Accounts Panel -->
+<div class="sheet-bg" id="connect-panel-bg" style="display:none" onclick="closeConnectPanel()">
+  <div class="sheet" onclick="event.stopPropagation()" style="max-height:80vh;overflow-y:auto">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Connected Accounts</div>
+
+    <!-- X / Twitter -->
+    <div style="margin-bottom:20px">
+      <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--t2);margin-bottom:10px">𝕏 / Twitter</div>
+      <div id="x-connect-status">
+        <button id="connect-x-btn" onclick="connectX()" style="width:100%;padding:12px;background:#000;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+          <span>Connect X account</span>
+          <span style="font-size:11px;background:#1d9bf0;color:#fff;padding:2px 8px;border-radius:99px">PRO</span>
+        </button>
+        <div style="font-size:12px;color:var(--muted);margin-top:6px;text-align:center">Connect to see your real X timeline in your briefing</div>
+      </div>
+    </div>
+
+    <!-- Newsletters / Substack -->
+    <div style="margin-bottom:20px">
+      <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--t2);margin-bottom:10px">📧 Newsletters & Substack</div>
+      <div id="substack-list" style="margin-bottom:8px"></div>
+      <div style="display:flex;gap:8px">
+        <input id="substack-input" type="url" placeholder="https://author.substack.com" style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;background:var(--s1);color:var(--t1);font-size:14px" />
+        <button onclick="addSubstack()" style="padding:10px 16px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer">Add</button>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-top:6px">Paste any Substack, Ghost, or RSS URL</div>
+    </div>
+
+    <button onclick="closeConnectPanel()" style="width:100%;padding:12px;background:var(--s2);color:var(--t1);border:none;border-radius:12px;font-size:15px;cursor:pointer;margin-top:4px">Done</button>
+  </div>
+</div>
+
+<!-- Pro Upgrade Modal -->
+<div id="upgrade-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:none;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:24px;padding:32px 24px;max-width:380px;width:100%;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.3)">
+    <div style="font-size:48px;margin-bottom:12px">⭐</div>
+    <h2 style="font-size:24px;font-weight:800;margin:0 0 8px;color:#111">Go Pro</h2>
+    <p style="color:#666;font-size:15px;margin:0 0 20px;line-height:1.5">The full briefing. Everything in one place, so you never have to open another app in the morning.</p>
+    <div style="margin:0 0 20px;background:#f8faff;border-radius:16px;padding:16px">
+      <div style="font-size:42px;font-weight:800;color:#111">$7.99<span style="font-size:18px;color:#888;font-weight:400">/mo</span></div>
+      <div style="font-size:13px;color:#888;margin-top:2px">or $59/year (save 38%)</div>
+    </div>
+    <ul style="text-align:left;margin:0 0 24px;padding:0;list-style:none">
+      <li style="padding:7px 0;border-bottom:1px solid #f0f0f0;font-size:14px;color:#333">✅ <strong>Real X timeline</strong> — posts from people you follow</li>
+      <li style="padding:7px 0;border-bottom:1px solid #f0f0f0;font-size:14px;color:#333">✅ <strong>Newsletter inbox</strong> — Substack + any RSS feed</li>
+      <li style="padding:7px 0;border-bottom:1px solid #f0f0f0;font-size:14px;color:#333">✅ <strong>Unlimited locations</strong> — home, work, family</li>
+      <li style="padding:7px 0;border-bottom:1px solid #f0f0f0;font-size:14px;color:#333">✅ <strong>Priority refresh</strong> — on-demand, not cached</li>
+      <li style="padding:7px 0;font-size:14px;color:#333">✅ <strong>Email digest</strong> — briefing delivered to your inbox</li>
+    </ul>
+    <button id="upgrade-cta-btn" onclick="startCheckout(localStorage.getItem('briefing_token'))" style="width:100%;padding:15px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;margin-bottom:10px">Start free trial → Pro</button>
+    <div style="font-size:12px;color:#888;margin-bottom:12px">14-day free trial. Cancel anytime.</div>
+    <button onclick="document.getElementById('upgrade-modal-bg').style.display='none'" style="background:none;border:none;color:#888;font-size:14px;cursor:pointer">Maybe later</button>
   </div>
 </div>
 
@@ -848,7 +910,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const API = 'https://motion-questionnaire-congressional-discrimination.trycloudflare.com';
+const API = 'https://mydailybriefing-api-production.up.railway.app';
 
 let briefingData = null;
 let profile      = null;
@@ -1074,7 +1136,7 @@ function showPaywallBanner(message, token) {
   b.className = 'paywall-banner';
   b.innerHTML = `
     <span>${message}</span>
-    <button onclick="startCheckout('${token}')">Subscribe – $4.99/mo</button>
+    <button onclick="startCheckout('${token}')">Upgrade to Pro – $7.99/mo</button>
     <button class="dismiss" onclick="this.parentElement.remove()">✕</button>
   `;
   document.body.prepend(b);
@@ -1090,21 +1152,21 @@ function showPaywallOverlay(token) {
   overlay.innerHTML = `
     <div class="paywall-modal">
       <div class="paywall-logo">📰</div>
-      <h2>Your free trial has ended</h2>
-      <p>Subscribe to keep getting your personalized daily briefing — local news, weather, markets, sports, and more.</p>
+      <h2>Unlock the full briefing</h2>
+      <p>Everything in one place. Real X timeline, newsletters, markets, local news, and more.</p>
       <div class="paywall-price">
-        <span class="price">$4.99</span>
+        <span class="price">$7.99</span>
         <span class="period">/month</span>
       </div>
       <ul class="paywall-features">
-        <li>✓ Personalized daily briefing</li>
-        <li>✓ Local news & weather</li>
-        <li>✓ Stock & market updates</li>
-        <li>✓ Sports scores & schedules</li>
-        <li>✓ Cancel anytime</li>
+        <li>✓ <strong>Real X timeline</strong> — posts from your follows</li>
+        <li>✓ <strong>Newsletters</strong> — Substack, Ghost, any RSS</li>
+        <li>✓ <strong>Unlimited locations</strong> — home, work, anywhere</li>
+        <li>✓ Local news, weather, markets, sports</li>
+        <li>✓ Priority refresh — on-demand, not cached</li>
       </ul>
-      <button class="paywall-cta" onclick="startCheckout('${token}')">Start for $4.99/month</button>
-      <p class="paywall-sub-note">Secure payment via Stripe. Cancel anytime.</p>
+      <button class="paywall-cta" onclick="startCheckout('${token}')">Start 14-day free trial</button>
+      <p class="paywall-sub-note">$7.99/month or $59/year. Cancel anytime.</p>
       <button class="paywall-dismiss" onclick="document.getElementById('paywall-overlay').remove()">Continue with limited access</button>
     </div>
   `;
@@ -1311,11 +1373,11 @@ function render(data) {
     const [top, ...rest] = s.local_news;
     h += `<div class="section" id="sec-local">
       <div class="sec-header"><span class="sec-title">📍 Local</span><span class="sec-meta">${loc}</span></div>
-      <div class="news-featured" style="--card-accent:#3b82f6" onclick="go('${esc(top.url)}')">
+      <a class="news-featured" style="--card-accent:#3b82f6;text-decoration:none;color:inherit;display:block" href="${(top.url||'#').replace(/"/g,'&quot;')}" target="_blank" rel="noopener noreferrer" onclick="if(this.href!='#')markRead(this.href)">
         <div class="badge" style="background:rgba(240,192,64,.12);color:var(--accent)">Local</div>
         <div class="featured-title">${top.title}</div>
         <div class="featured-meta"><span class="featured-source">${top.source||''}</span>${top.pubDate?`<span>${ago(top.pubDate)}</span>`:''}</div>
-      </div>
+      </a>
       <div class="news-stack">
         ${rest.map(n => newsCard(n, 'Local', '#3b82f6')).join('')}
       </div>
@@ -1332,22 +1394,10 @@ function render(data) {
 
   // ── Politics ──
   const pol = s.politics || {};
-  if (pol.federal_reps?.length || pol.governor) {
-    const allPolNews = [...(pol.governor_news||[]), ...(pol.state_legislature||[]), ...(pol.federal_news||[])].slice(0,5);
+  const allPolNews = [...(pol.governor_news||[]), ...(pol.state_legislature||[]), ...(pol.federal_news||[]), ...(pol.county||[])].slice(0,8);
+  if (allPolNews.length) {
     h += `<div class="section" id="sec-politics">
       <div class="sec-header"><span class="sec-title">🏛 Politics</span><span class="sec-meta">Federal · State · Local</span></div>
-      <div class="rep-grid">
-        ${pol.governor ? `<div class="rep-card">
-          <div class="rep-role">Governor</div>
-          <div class="rep-name">${pol.governor.name}</div>
-          <div class="rep-party ${pol.governor.party === 'R' ? 'party-r':'party-d'}">${pol.governor.party==='R'?'🔴 Republican':'🔵 Democrat'}</div>
-        </div>` : ''}
-        ${(pol.federal_reps||[]).map(r=>`<div class="rep-card">
-          <div class="rep-role">${r.chamber}${r.district ? ' · Dist. '+r.district:''}</div>
-          <div class="rep-name">${r.name}</div>
-          <div class="rep-party ${r.party==='Republican'?'party-r':'party-d'}">${r.party==='Republican'?'🔴 Republican':'🔵 Democrat'}</div>
-        </div>`).join('')}
-      </div>
       <div class="news-stack">${allPolNews.map(n=>newsCard(n,'Civic','var(--teal)')).join('')}</div>
     </div>`;
   }
@@ -1408,6 +1458,118 @@ function render(data) {
         <div class="news-stack">
           ${cl.faith.slice(0,3).map(n=>newsCard(n,'Community','var(--blue)')).join('')}
         </div>`;
+    }
+
+    h += `</div>`;
+  }
+
+  // ── Social Feed ──
+  const sf = s.social_feed || {};
+  const sfItems = sf.items || [];
+  if (sfItems.length) {
+    // Group by platform + handle for sub-labels
+    const byHandle = {};
+    sfItems.forEach(item => {
+      const key = item.source || item.platform || 'Social';
+      if (!byHandle[key]) byHandle[key] = [];
+      byHandle[key].push(item);
+    });
+
+    const platformColor = p => {
+      if ((p||'').startsWith('r/'))  return '#ff4500';  // Reddit orange
+      if ((p||'').startsWith('@'))   return '#1d9bf0';  // X blue
+      return '#8b5cf6';
+    };
+
+    const realTweets     = sfItems.filter(i => i.platform === 'X' && i.author_handle);
+    const newsAboutX     = sfItems.filter(i => i.platform === 'X' && !i.author_handle);
+    const newsletterItems = sfItems.filter(i => i.platform === 'Newsletter');
+    const redditItems    = sfItems.filter(i => i.platform === 'Reddit');
+
+    const metaParts = [];
+    if (sf.has_twitter_connected) metaParts.push('𝕏 Timeline');
+    if (sf.has_newsletters) metaParts.push('Newsletters');
+    metaParts.push('Reddit');
+
+    h += `<div class="section" id="sec-social">
+      <div class="sec-header"><span class="sec-title">📡 Social</span><span class="sec-meta">${metaParts.join(' · ')}</span></div>`;
+
+    // Real tweets (OAuth connected) — tweet card style
+    if (realTweets.length) {
+      h += `<div class="sub-label">𝕏 Your Timeline</div>
+        <div class="news-stack">
+          ${realTweets.slice(0,10).map(t => {
+            const avatar = t.avatar
+              ? `<img src="${t.avatar}" style="width:36px;height:36px;border-radius:50%;flex-shrink:0;object-fit:cover" onerror="this.style.display='none'">`
+              : `<div style="width:36px;height:36px;border-radius:50%;background:#1d9bf022;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">𝕏</div>`;
+            return `<a class="news-card" style="--card-accent:#1d9bf0;text-decoration:none;color:inherit;display:flex;align-items:flex-start;gap:10px" href="${(t.url||'#').replace(/"/g,'&quot;')}" target="_blank" rel="noopener noreferrer">
+              ${avatar}
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13px;font-weight:600;color:var(--t1)">${t.author_name||''} <span style="font-weight:400;color:var(--muted)">${t.author_handle||''}</span></div>
+                <div style="font-size:14px;line-height:1.4;margin:4px 0;color:var(--t1)">${t.text||''}</div>
+                <div style="font-size:12px;color:var(--muted)">${ago(t.pubDate)}${t.likes?' · ♥ '+t.likes:''}${t.retweets?' · ↻ '+t.retweets:''}</div>
+              </div>
+            </a>`;
+          }).join('')}
+        </div>`;
+    }
+
+    // Newsletter items
+    if (newsletterItems.length) {
+      h += `<div class="sub-label" style="margin-top:${realTweets.length?'16px':'0'}">📧 Newsletters</div>
+        <div class="news-stack">${newsletterItems.slice(0,5).map(n => {
+          const color = '#8b5cf6';
+          return `<a class="news-card" style="--card-accent:${color};text-decoration:none;color:inherit;display:flex" href="${(n.url||'#').replace(/"/g,'&quot;')}" target="_blank" rel="noopener noreferrer">
+            <div class="news-card-body">
+              <div class="badge" style="background:${color}22;color:${color}">${n.source||'Newsletter'}</div>
+              <div class="news-title">${n.title}</div>
+              <div class="news-meta"><span class="news-source">${n.source||''}</span><span>${ago(n.pubDate)}</span></div>
+            </div>
+            <div class="news-chevron">›</div>
+          </a>`;
+        }).join('')}</div>`;
+    }
+
+    // News about followed X accounts (Google News proxy, no real tweets)
+    if (newsAboutX.length && !realTweets.length) {
+      h += `<div class="sub-label" style="margin-top:${newsletterItems.length?'16px':'0'}">From people you follow</div>
+        <div class="news-stack">${newsAboutX.slice(0,5).map(n => {
+          const color = '#1d9bf0';
+          return `<a class="news-card" style="--card-accent:${color};text-decoration:none;color:inherit;display:flex" href="${(n.url||'#').replace(/"/g,'&quot;')}" target="_blank" rel="noopener noreferrer">
+            <div class="news-card-body">
+              <div class="badge" style="background:${color}22;color:${color}">${n.source||'X'}</div>
+              <div class="news-title">${n.title}</div>
+              <div class="news-meta"><span>${ago(n.pubDate)}</span></div>
+            </div>
+            <div class="news-chevron">›</div>
+          </a>`;
+        }).join('')}</div>`;
+    }
+
+    // Reddit
+    if (redditItems.length) {
+      h += `<div class="sub-label" style="margin-top:16px">Reddit</div>
+        <div class="news-stack">${redditItems.slice(0,5).map(n => {
+          const color = '#ff4500';
+          return `<a class="news-card" style="--card-accent:${color};text-decoration:none;color:inherit;display:flex" href="${(n.url||'#').replace(/"/g,'&quot;')}" target="_blank" rel="noopener noreferrer">
+            <div class="news-card-body">
+              <div class="badge" style="background:${color}22;color:${color}">${n.source||'Reddit'}</div>
+              <div class="news-title">${n.title}</div>
+              <div class="news-meta"><span>${ago(n.pubDate)}</span></div>
+            </div>
+            <div class="news-chevron">›</div>
+          </a>`;
+        }).join('')}</div>`;
+    }
+
+    // Connect X CTA (if no real tweet connection)
+    if (!sf.has_twitter_connected) {
+      h += `<div style="margin:16px 0 4px;padding:16px;background:linear-gradient(135deg,#0f172a,#1e3a5f);border-radius:14px;color:#fff">
+        <div style="font-size:15px;font-weight:700;margin-bottom:4px">𝕏 Connect your X account</div>
+        <div style="font-size:13px;color:rgba(255,255,255,.7);margin-bottom:12px">See your real timeline — posts from everyone you follow — right here in your briefing.</div>
+        <button onclick="openConnectPanel()" style="background:#1d9bf0;color:#fff;border:none;border-radius:10px;padding:9px 18px;font-size:14px;font-weight:600;cursor:pointer">Connect X →</button>
+        <span style="font-size:11px;color:rgba(255,255,255,.5);margin-left:10px">Pro feature</span>
+      </div>`;
     }
 
     h += `</div>`;
@@ -1498,12 +1660,12 @@ async function saveEmail() {
 
 // ── Helpers ──────────────────────────────────────────────────────
 function obituaryCard(n) {
-  const url = (n.url||'#').replace(/'/g,"\\'");
+  const href = n.url || '#';
   // Try to extract just the name from "Obituary | John Smith of City, State - Funeral Home"
   let name = n.title || '';
   name = name.replace(/^Obituary\s*[\|:–-]\s*/i, '').replace(/\s*-\s*[^-]+$/, '').trim();
   const source = n.source || '';
-  return `<div class="obit-card" onclick="go('${url}')">
+  return `<a class="obit-card" style="text-decoration:none;color:inherit" href="${href.replace(/"/g,'&quot;')}" target="_blank" rel="noopener noreferrer" onclick="if(this.href!='#')markRead(this.href)">
     <div class="obit-candle">🕯</div>
     <div class="obit-body">
       <div class="obit-name">${name}</div>
@@ -1513,13 +1675,14 @@ function obituaryCard(n) {
       </div>
     </div>
     <div class="news-chevron">›</div>
-  </div>`;
+  </a>`;
 }
 
 function newsCard(n, label, color) {
-  const url     = (n.url||'#').replace(/'/g,"\\'");
+  const href    = n.url || '#';
   const dataUrl = (n.url||'').replace(/"/g,'&quot;');
-  return `<div class="news-card" style="--card-accent:${color}" onclick="go('${url}')" data-url="${dataUrl}">
+  const target  = href !== '#' ? 'target="_blank" rel="noopener noreferrer"' : '';
+  return `<a class="news-card" style="--card-accent:${color};text-decoration:none;color:inherit;display:flex" href="${href.replace(/"/g,'&quot;')}" ${target} data-url="${dataUrl}" onclick="if(this.href!='#')markRead(this.href)">
     <div class="news-card-body">
       <div class="badge" style="background:${color}22;color:${color}">${label}</div>
       <div class="news-title">${n.title}</div>
@@ -1529,7 +1692,7 @@ function newsCard(n, label, color) {
       </div>
     </div>
     <div class="news-chevron">›</div>
-  </div>`;
+  </a>`;
 }
 function getWeatherRange(weather) {
   const current = weather?.current;
@@ -1680,6 +1843,99 @@ function handleSheetBg(e) { if (e.target.id === 'sheet-bg') closeSettings(); }
 function closeSettings()  { document.getElementById('sheet-bg').classList.remove('open'); }
 function editPrefs()      { closeSettings(); location.href = 'index.html'; }
 function signOut()        { localStorage.clear(); location.href = 'index.html'; }
+
+// ── Connected Accounts Panel ──────────────────────────────────────
+function openConnectPanel() {
+  closeSettings();
+  const bg = document.getElementById('connect-panel-bg');
+  bg.style.display = 'flex';
+  setTimeout(() => bg.classList.add('open'), 10);
+  renderSubstackList();
+}
+function closeConnectPanel() {
+  const bg = document.getElementById('connect-panel-bg');
+  bg.classList.remove('open');
+  setTimeout(() => bg.style.display = 'none', 300);
+}
+
+async function addSubstack() {
+  const input = document.getElementById('substack-input');
+  let url = (input.value || '').trim();
+  if (!url) return;
+  // Normalize: add https://, append /feed if needed
+  if (!url.startsWith('http')) url = 'https://' + url;
+  if (!url.includes('/feed')) url = url.replace(/\/$/, '') + '/feed';
+  const token = localStorage.getItem('briefing_token');
+  try {
+    const res = await fetch(`${API}/api/users/${token}/substack`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url })
+    });
+    if (res.ok) {
+      input.value = '';
+      const data = await res.json();
+      renderSubstackList(data.substack_feeds);
+      showToast('Newsletter added ✓');
+    } else {
+      showToast('Could not add — check the URL');
+    }
+  } catch { showToast('Could not save'); }
+}
+
+async function removeSubstack(url) {
+  const token = localStorage.getItem('briefing_token');
+  try {
+    await fetch(`${API}/api/users/${token}/substack`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url })
+    });
+    // Reload list
+    const res = await fetch(`${API}/api/users/${token}/profile`);
+    const p = await res.json();
+    renderSubstackList(p.substack_feeds);
+    showToast('Removed');
+  } catch { showToast('Could not remove'); }
+}
+
+function renderSubstackList(feeds) {
+  const list = document.getElementById('substack-list');
+  if (!list) return;
+  const f = feeds || JSON.parse(localStorage.getItem('substack_feeds') || '[]');
+  if (!f.length) { list.innerHTML = '<div style="font-size:13px;color:var(--muted);padding:4px 0">No newsletters added yet</div>'; return; }
+  list.innerHTML = f.map(url => {
+    const label = url.replace(/^https?:\/\//, '').replace(/\/feed\/?$/, '');
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:14px">
+      <span style="color:var(--t1)">${label}</span>
+      <button onclick="removeSubstack('${url.replace(/'/g,"\\'")}');this.closest('[style*=flex]').remove()" style="background:none;border:none;color:var(--red);font-size:18px;cursor:pointer;padding:0 4px">×</button>
+    </div>`;
+  }).join('');
+}
+
+// ── X OAuth ───────────────────────────────────────────────────────
+function connectX() {
+  const token = localStorage.getItem('briefing_token');
+  window.location.href = `${API}/api/auth/twitter/start?token=${token}`;
+}
+
+// ── Pro Upgrade Modal ─────────────────────────────────────────────
+function showUpgradeModal() {
+  closeSettings();
+  const m = document.getElementById('upgrade-modal-bg');
+  m.style.display = 'flex';
+}
+
+// Update settings sheet — hide upgrade row if already Pro
+function updateUpgradeRow(isPro) {
+  const label = document.getElementById('upgrade-row-label');
+  const badge = document.getElementById('upgrade-row-badge');
+  if (isPro && label) {
+    label.textContent = '⭐ Pro — Active';
+    label.style.color = '#22c55e';
+    if (badge) badge.style.display = 'none';
+  }
+}
 
 // ── Sources & Voices Panel ────────────────────────────────────────
 const BRIEFING_SUGGESTED_ACCOUNTS = {

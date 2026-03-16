@@ -1,3 +1,4 @@
+const { fixUrl } = require('./url-fix');
 /**
  * politics.js
  * Federal + state + local political context by ZIP code.
@@ -80,7 +81,7 @@ const GOOGLE_NEWS = (q) =>
 
 async function fetchRSS(url, maxItems = 4) {
   try {
-    const res  = await fetch(url, { headers: { 'User-Agent': 'BriefingApp/1.0' }, timeout: 8000 });
+    const res  = await fetch(url, { headers: { 'User-Agent': 'BriefingApp/1.0' }, signal: AbortSignal.timeout(8000) });
     if (!res.ok) return [];
     const text   = await res.text();
     const parsed = parser.parse(text);
@@ -88,7 +89,7 @@ async function fetchRSS(url, maxItems = 4) {
     const arr    = Array.isArray(items) ? items : (items ? [items] : []);
     return arr.slice(0, maxItems).map(i => ({
       title:   (i.title  || '').replace(/\s*-\s*[^-]{2,40}$/, '').trim(),
-      url:     i.link    || i.guid || '',
+      url: fixUrl(i.link || i.guid || ''),
       source:  i.source?.['#text'] || '',
       pubDate: i.pubDate || '',
     }));
@@ -107,7 +108,7 @@ async function getFederalReps(zip) {
   try {
     const res = await fetch(
       `https://whoismyrepresentative.com/getall_mems.php?zip=${zip}&output=json`,
-      { headers: { 'User-Agent': 'BriefingApp/1.0' }, timeout: 8000 }
+      { headers: { 'User-Agent': 'BriefingApp/1.0' }, signal: AbortSignal.timeout(8000) }
     );
     if (!res.ok) return [];
     const data = await res.json();
@@ -118,7 +119,7 @@ async function getFederalReps(zip) {
       district: r.district || null,
       phone:    r.phone,
       office:   r.office,
-      url:      r.link,
+      url: fixUrl(r.link),
       chamber:  r.district ? 'House' : 'Senate',
     }));
     // Deduplicate (API sometimes returns senator twice)

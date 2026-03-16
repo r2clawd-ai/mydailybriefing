@@ -58,15 +58,23 @@ async function fetchRSS(url) {
   }
 }
 
+function fixUrl(url) {
+  if (!url) return '';
+  // Google News RSS redirect → direct article URL (works on all browsers/mobile)
+  return url.replace('news.google.com/rss/articles/', 'news.google.com/articles/');
+}
+
 function normalizeItem(item) {
   return {
     title:       item.title       || '',
-    link:        item.link        || item.guid || '',
+    link:        fixUrl(item.link || item.guid || ''),
     source:      item.source?.['#text'] || item.source || item['dc:creator'] || '',
     published:   item.pubDate     || item['dc:date'] || '',
     description: item.description ? stripHTML(item.description).slice(0, 200) : '',
   };
 }
+
+module.exports.fixUrl = fixUrl;
 
 function normalizeState(state = '') {
   const input = String(state).trim();
@@ -336,62 +344,36 @@ async function getTopicNews(interests = []) {
 }
 
 /**
- * Get market data for an array of stock tickers via yfinance Python subprocess.
+ * Get market data for an array of stock tickers via yahoo-finance2 (pure Node).
  */
 async function getMarkets(stocks = ['SPY', 'QQQ', 'BTC-USD']) {
-  return new Promise((resolve) => {
-    const tickers = stocks.length ? stocks : ['SPY', 'QQQ', 'BTC-USD'];
-    const tickerList = tickers.map(s => s.trim()).join(' ');
-
-    const pyCode = `
-import yfinance as yf, json, sys
-tickers = "${tickerList}".split()
-results = []
-for sym in tickers:
-    try:
-        t = yf.Ticker(sym)
-        info = t.fast_info
-        hist = t.history(period="2d")
-        if len(hist) >= 1:
-            price = float(hist['Close'].iloc[-1])
-            prev  = float(hist['Close'].iloc[-2]) if len(hist) >= 2 else price
-            chg   = price - prev
-            pct   = (chg / prev * 100) if prev else 0
-            results.append({
-                "symbol": sym,
-                "price": round(price, 4),
-                "change": round(chg, 4),
-                "change_pct": round(pct, 2),
-                "direction": "up" if chg >= 0 else "down"
-            })
-    except Exception as e:
-        results.append({"symbol": sym, "error": str(e)})
-print(json.dumps(results))
-`.trim();
-
-    const py3 = process.env.PYTHON3_PATH || '/opt/homebrew/bin/python3';
-    exec(`${py3} -c '${pyCode.replace(/'/g, `'"'"'`)}'`, { timeout: 30000 }, (err, stdout, stderr) => {
-      if (err) {
-        console.warn('Markets subprocess error:', err.message);
-        resolve([]);
-        return;
-      }
-      try {
-        // Replace NaN (invalid JSON from Python) with null before parsing
-        const sanitized = stdout.trim().replace(/:\s*NaN/g, ': null').replace(/:\s*Infinity/g, ': null');
-        const data = JSON.parse(sanitized);
-        // Filter out entries with null price
-        const clean = (Array.isArray(data) ? data : []).filter(d => d.price !== null && d.price !== undefined && !d.error);
-        resolve(clean);
-      } catch (parseErr) {
-        console.warn('Markets JSON parse error:', parseErr.message, '|', stdout.slice(0, 200));
-        resolve([]);
-      }
-    });
-  });
+  let yf;
+  try { yf = require('yahoo-finance2').default; } catch(e) { return []; }
+  const tickers = (stocks.length ? stocks : ['SPY', 'QQQ', 'BTC-USD']).map(s => s.trim());
+  const results = [];
+  for (const sym of tickers) {
+    try {
+      const q = await yf.quote(sym, {}, { validateResult: false });
+      const price = q.regularMarketPrice ?? q.currentPrice ?? null;
+      const prev  = q.regularMarketPreviousClose ?? price;
+      if (price === null) continue;
+      const chg = price - prev;
+      const pct = prev ? (chg / prev * 100) : 0;
+      results.push({
+        symbol: sym,
+        price:      Math.round(price * 10000) / 10000,
+        change:     Math.round(chg   * 10000) / 10000,
+        change_pct: Math.round(pct   * 100)   / 100,
+        direction:  chg >= 0 ? 'up' : 'down',
+      });
+    } catch(e) {
+      console.warn(`Markets fetch error for ${sym}:`, e.message);
+    }
+  }
+  return results;
 }
 
-module.exports = { getWeather, getLocalNews, getNationalNews, getSportsNews, getTopicNews, getMarkets, dedupAgainst, LOCAL_TV_RSS };
+module.exports = { getWeather, getLocalNews, getNationalNews, getSportsNews, getTopicNews, getMarkets, dedupAgainst, dedup, LOCAL_TV_RSS };
 
 /**
  * Generate actionable weather summary line.

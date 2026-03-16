@@ -1,3 +1,4 @@
+const { fixUrl } = require('./url-fix');
 /**
  * hyper-local.js
  * Neighborhood and community-level content sources.
@@ -93,7 +94,7 @@ async function fetchText(url) {
   try {
     const res = await fetch(url, {
       headers: { 'User-Agent': 'BriefingApp/1.0' },
-      timeout: FETCH_TIMEOUT_MS,
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
     if (!res.ok) return null;
     return await res.text();
@@ -107,7 +108,7 @@ async function fetchJSON(url) {
   try {
     const res = await fetch(url, {
       headers: { 'User-Agent': 'BriefingApp/1.0' },
-      timeout: FETCH_TIMEOUT_MS,
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
     if (!res.ok) return null;
     return await res.json();
@@ -126,7 +127,7 @@ async function fetchGoogleNewsItems(query, limit = 3, type = 'community') {
   const arr = Array.isArray(items) ? items : (items ? [items] : []);
   return arr.slice(0, limit).map(i => ({
     title: (i.title || '').replace(/\s*-\s*[^-]{2,40}$/, '').trim(),
-    url: i.link || i.guid || '',
+    url: fixUrl(i.link || i.guid || ''),
     source: i.source?.['#text'] || 'Google News',
     type,
   }));
@@ -173,7 +174,7 @@ async function getMeetupEvents(city, state, maxItems = 3) {
     const arr = Array.isArray(items) ? items : (items ? [items] : []);
     return arr.slice(0, maxItems).map(i => ({
       title: (i.title || '').replace(/\s*-\s*Meetup\s*$/i, '').trim(),
-      url: i.link || i.guid || '',
+      url: fixUrl(i.link || i.guid || ''),
       source: 'Meetup',
       type: 'event',
     })).filter(item => item.title);
@@ -273,7 +274,7 @@ async function getSafetyAlerts(lat, lng) {
   try {
     const res = await fetch(
       `https://api.weather.gov/alerts/active?point=${lat},${lng}`,
-      { headers: { 'User-Agent': 'BriefingApp/1.0' }, timeout: FETCH_TIMEOUT_MS }
+      { headers: { 'User-Agent': 'BriefingApp/1.0' }, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) }
     );
     if (!res.ok) return [];
     const data   = await res.json();

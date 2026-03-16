@@ -1,3 +1,4 @@
+const { fixUrl } = require('./url-fix');
 /**
  * community.js — The heart of the paper.
  * Obituaries, memorials, community announcements, milestones, church news.
@@ -41,7 +42,7 @@ function withinDays(pubDate, maxDays) {
 function parseItem(it) {
   return {
     title:   (it.title?.['#text'] || it.title || '').replace(/<[^>]+>/g, '').trim(),
-    url:     it.link?.href || it.link || it.guid?.['#text'] || it.guid || '',
+    url: fixUrl(it.link?.href || it.link || it.guid?.['#text'] || it.guid || ''),
     source:  it.source?.['#text'] || it.source || '',
     pubDate: it.pubDate || it.published || it.updated || '',
   };

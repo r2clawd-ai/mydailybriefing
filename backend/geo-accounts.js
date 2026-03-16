@@ -1,3 +1,4 @@
+const { fixUrl } = require('./url-fix');
 /**
  * geo-accounts.js
  * Curated local social accounts by city/state.

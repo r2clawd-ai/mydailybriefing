@@ -1,3 +1,4 @@
+const { fixUrl } = require('./url-fix');
 /**
  * hs-sports.js
  * High school sports news and scores by city/state/school name.
@@ -141,7 +142,7 @@ async function fetchRSS(url, maxItems = 5) {
     const arr    = Array.isArray(items) ? items : (items ? [items] : []);
     return arr.slice(0, maxItems).map(i => ({
       title:   (i.title  || '').replace(/\s*-\s*[^-]{2,40}$/, '').trim(),
-      url:     i.link    || i.guid || '',
+      url: fixUrl(i.link || i.guid || ''),
       source:  i.source?.['#text'] || '',
       pubDate: i.pubDate || '',
       type:    'hs_sports',
