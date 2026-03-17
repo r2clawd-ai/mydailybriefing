@@ -42,6 +42,10 @@ db.exec(`
     twitter_access_token TEXT,
     twitter_refresh_token TEXT,
     twitter_token_expiry INTEGER,
+    google_calendar_token TEXT,
+    google_calendar_refresh_token TEXT,
+    google_calendar_expiry INTEGER,
+    calendar_ics_url TEXT,
     substack_feeds TEXT DEFAULT '[]',
     is_pro INTEGER DEFAULT 0,
     pro_expires_at TEXT,
@@ -57,10 +61,18 @@ db.exec(`
   'twitter_access_token TEXT',
   'twitter_refresh_token TEXT',
   'twitter_token_expiry INTEGER',
+  'google_calendar_token TEXT',
+  'google_calendar_refresh_token TEXT',
+  'google_calendar_expiry INTEGER',
+  'calendar_ics_url TEXT',
   `substack_feeds TEXT DEFAULT '[]'`,
   'is_pro INTEGER DEFAULT 0',
   'pro_expires_at TEXT',
   `saved_locations TEXT DEFAULT '[]'`,
+  'stripe_customer_id TEXT',
+  'subscription_status TEXT',
+  'subscription_id TEXT',
+  'subscription_end INTEGER',
 ].forEach(addColumnIfMissing);
 
 function parseJsonArray(value) {
@@ -95,11 +107,13 @@ const stmtInsert = db.prepare(`
   INSERT INTO users (id, email, zip_code, city, state, lat, lng,
     interests, sports_teams, celeb_topics, twitter_handles,
     twitter_access_token, twitter_refresh_token, twitter_token_expiry,
+    google_calendar_token, google_calendar_refresh_token, google_calendar_expiry, calendar_ics_url,
     substack_feeds, is_pro, pro_expires_at, stocks, hs_teams, saved_locations,
     created_at, token)
   VALUES (@id, @email, @zip_code, @city, @state, @lat, @lng,
     @interests, @sports_teams, @celeb_topics, @twitter_handles,
     @twitter_access_token, @twitter_refresh_token, @twitter_token_expiry,
+    @google_calendar_token, @google_calendar_refresh_token, @google_calendar_expiry, @calendar_ics_url,
     @substack_feeds, @is_pro, @pro_expires_at, @stocks, @hs_teams, @saved_locations,
     @created_at, @token)
 `);
@@ -121,6 +135,10 @@ const stmtUpdate = db.prepare(`
     twitter_access_token = COALESCE(@twitter_access_token, twitter_access_token),
     twitter_refresh_token = COALESCE(@twitter_refresh_token, twitter_refresh_token),
     twitter_token_expiry = COALESCE(@twitter_token_expiry, twitter_token_expiry),
+    google_calendar_token = COALESCE(@google_calendar_token, google_calendar_token),
+    google_calendar_refresh_token = COALESCE(@google_calendar_refresh_token, google_calendar_refresh_token),
+    google_calendar_expiry = COALESCE(@google_calendar_expiry, google_calendar_expiry),
+    calendar_ics_url = COALESCE(@calendar_ics_url, calendar_ics_url),
     substack_feeds  = COALESCE(@substack_feeds, substack_feeds),
     is_pro          = COALESCE(@is_pro, is_pro),
     pro_expires_at  = COALESCE(@pro_expires_at, pro_expires_at),
@@ -136,6 +154,8 @@ function createUser({ email, zip_code, city, state, lat, lng,
                        interests = [], sports_teams = [], celeb_topics = [],
                        twitter_handles = [], twitter_access_token = null,
                        twitter_refresh_token = null, twitter_token_expiry = null,
+                       google_calendar_token = null, google_calendar_refresh_token = null,
+                       google_calendar_expiry = null, calendar_ics_url = null,
                        substack_feeds = [], is_pro = false, pro_expires_at = null,
                        stocks = [], hs_teams = [], saved_locations = [] }) {
   const id    = uuidv4();
@@ -160,6 +180,10 @@ function createUser({ email, zip_code, city, state, lat, lng,
     twitter_access_token,
     twitter_refresh_token,
     twitter_token_expiry,
+    google_calendar_token,
+    google_calendar_refresh_token,
+    google_calendar_expiry,
+    calendar_ics_url,
     substack_feeds:  JSON.stringify(substack_feeds),
     is_pro:          is_pro ? 1 : 0,
     pro_expires_at,
@@ -195,6 +219,10 @@ function updateUser(token, fields) {
   if (fields.twitter_access_token !== undefined) patch.twitter_access_token = fields.twitter_access_token;
   if (fields.twitter_refresh_token !== undefined) patch.twitter_refresh_token = fields.twitter_refresh_token;
   if (fields.twitter_token_expiry !== undefined) patch.twitter_token_expiry = fields.twitter_token_expiry;
+  if (fields.google_calendar_token !== undefined) patch.google_calendar_token = fields.google_calendar_token;
+  if (fields.google_calendar_refresh_token !== undefined) patch.google_calendar_refresh_token = fields.google_calendar_refresh_token;
+  if (fields.google_calendar_expiry !== undefined) patch.google_calendar_expiry = fields.google_calendar_expiry;
+  if (fields.calendar_ics_url !== undefined) patch.calendar_ics_url = fields.calendar_ics_url;
   if (fields.substack_feeds  !== undefined) patch.substack_feeds  = JSON.stringify(fields.substack_feeds);
   if (fields.is_pro          !== undefined) patch.is_pro          = fields.is_pro ? 1 : 0;
   if (fields.pro_expires_at  !== undefined) patch.pro_expires_at  = fields.pro_expires_at;

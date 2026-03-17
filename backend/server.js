@@ -23,6 +23,9 @@ const { getTwitterTimeline }   = require('./social-twitter');
 const { getNewsletterFeed }    = require('./social-newsletters');
 const { normalizeFeedUrl }     = require('./social-newsletters');
 const { registerTwitterAuthRoutes } = require('./oauth-twitter');
+const { registerGoogleAuthRoutes } = require('./oauth-google');
+const { getCalendarEvents } = require('./calendar');
+const payments = require('./payments');
 
 const app  = express();
 const PORT = process.env.PORT || 3001;
@@ -53,6 +56,7 @@ app.use(cors({
 }));
 app.use(express.json());
 registerTwitterAuthRoutes(app);
+registerGoogleAuthRoutes(app);
 
 // ─────────────────────────────────────────────
 //  Health check
@@ -194,6 +198,53 @@ app.get('/api/users/:token/subscription', (req, res) => {
   });
 });
 
+// POST /api/checkout — create Stripe checkout session
+app.post('/api/checkout', async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ error: 'token required' });
+    const origin = req.headers.origin || 'https://mydailybriefing.app';
+    const result = await payments.createCheckoutSession(
+      db.db,
+      token,
+      `${origin}/briefing.html?token=${token}&upgraded=1`,
+      `${origin}/briefing.html?token=${token}`
+    );
+    res.json(result);
+  } catch (err) {
+    console.error('[checkout]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/portal/:token — customer billing portal
+app.post('/api/portal/:token', async (req, res) => {
+  try {
+    const origin = req.headers.origin || 'https://mydailybriefing.app';
+    const result = await payments.createPortalSession(
+      db.db,
+      req.params.token,
+      `${origin}/briefing.html?token=${req.params.token}`
+    );
+    res.json(result);
+  } catch (err) {
+    console.error('[portal]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/webhook — Stripe webhook (raw body required)
+app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  try {
+    const sig = req.headers['stripe-signature'];
+    const result = await payments.handleWebhook(db.db, req.body, sig);
+    res.json(result);
+  } catch (err) {
+    console.error('[webhook]', err.message);
+    res.status(400).json({ error: err.message });
+  }
+});
+
 // PUT /api/users/:token/profile
 app.put('/api/users/:token/profile', async (req, res) => {
   try {
@@ -256,6 +307,52 @@ app.put('/api/users/:token/substack', (req, res) => {
   }
 });
 
+app.put('/api/users/:token/calendar-ics', (req, res) => {
+  try {
+    const user = db.getUserByToken(req.params.token);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const rawUrl = String(req.body?.url || '').trim();
+    if (!rawUrl) {
+      return res.status(400).json({ error: 'url is required' });
+    }
+
+    const normalizedUrl = rawUrl.replace(/^webcal:\/\//i, 'https://');
+    let parsed;
+    try {
+      parsed = new URL(normalizedUrl);
+    } catch {
+      return res.status(400).json({ error: 'Invalid calendar URL' });
+    }
+
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      return res.status(400).json({ error: 'Invalid calendar URL' });
+    }
+
+    const updated = db.updateUser(req.params.token, {
+      calendar_ics_url: parsed.toString(),
+    });
+
+    res.json({ calendar_ics_url: updated.calendar_ics_url });
+  } catch (error) {
+    console.error('Calendar ICS update error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/users/:token/calendar', async (req, res) => {
+  try {
+    const user = db.getUserByToken(req.params.token);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const events = await getCalendarEvents(req.params.token, { days: 1 });
+    res.json({ events });
+  } catch (error) {
+    console.error('Calendar route error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/users/:token/subscription', (req, res) => {
   const user = db.getUserByToken(req.params.token);
   if (!user) return res.status(404).json({ error: 'User not found' });
@@ -309,7 +406,7 @@ app.get('/api/users/:token/briefing', async (req, res) => {
     }
 
     // Fetch all sections in parallel, each fails gracefully
-    const [weather, markets, national_news, local_news, sports, interests_news, local_accounts, hyper_local, politics, hs_sports, community_life, social_feed] =
+    const [weather, markets, national_news, local_news, sports, interests_news, local_accounts, hyper_local, politics, hs_sports, community_life, social_feed, calendar] =
       await Promise.all([
         geoData.lat
           ? content.getWeather(geoData.lat, geoData.lng, nwsGrid).catch(() => null)
@@ -353,6 +450,7 @@ app.get('/api/users/:token/briefing', async (req, res) => {
             empty: deduped.length === 0,
           };
         })(),
+        getCalendarEvents(req.params.token).catch(() => []),
       ]);
 
     // Annotate weather with actionable summary
@@ -451,6 +549,7 @@ app.get('/api/users/:token/briefing', async (req, res) => {
         hs_sports,
         community_life,
         social_feed,
+        calendar,
       },
     });
   } catch (e) {
@@ -551,6 +650,8 @@ app.listen(PORT, () => {
   console.log(`  POST /api/users/signup`);
   console.log(`  GET  /api/users/:token/profile`);
   console.log(`  PUT  /api/users/:token/profile`);
+  console.log(`  GET  /api/users/:token/calendar`);
+  console.log(`  PUT  /api/users/:token/calendar-ics`);
   console.log(`  GET  /api/users/:token/briefing`);
   console.log(`  GET  /api/geo/zip/:zip`);
 });
