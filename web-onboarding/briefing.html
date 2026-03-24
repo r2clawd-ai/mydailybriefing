@@ -294,6 +294,19 @@
     }
     .sub-label  { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 12px 0 8px; }
 
+    /* ─── Calendar ─── */
+    .calendar-stack { display: flex; flex-direction: column; gap: 8px; }
+    .calendar-card {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px; border-radius: 10px; background: var(--s2);
+      border-left: 3px solid var(--accent);
+      font-size: 14px;
+    }
+    .cal-time { font-weight: 700; color: var(--accent); min-width: 60px; font-size: 13px; }
+    .cal-details { flex: 1; min-width: 0; }
+    .cal-title { font-weight: 600; color: var(--t1); margin-bottom: 2px; }
+    .cal-location { color: var(--muted); font-size: 12px; margin-top: 2px; }
+
     /* ─── Weather ─── */
     .weather-card {
       background: linear-gradient(145deg, #1a2540 0%, #0f1a30 100%);
@@ -785,6 +798,7 @@
 <div class="section-nav-wrap">
   <div class="section-nav" id="section-nav">
     <div class="nav-pill active" data-target="sec-weather">⛅ Weather</div>
+    <div class="nav-pill" data-target="sec-calendar">📅 Calendar</div>
     <div class="nav-pill" data-target="sec-markets">📈 Markets</div>
     <div class="nav-pill" data-target="sec-local">📍 Local</div>
     <div class="nav-pill" data-target="sec-national">📰 National</div>
@@ -910,7 +924,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const API = 'https://mydailybriefing-api-production.up.railway.app';
+const API = window.location.hostname === 'localhost' ? 'http://localhost:3001' : 'https://mydailybriefing-api-production.up.railway.app';
 
 let briefingData = null;
 let profile      = null;
@@ -1077,7 +1091,7 @@ async function init() {
   if (urlToken) { localStorage.setItem('briefing_token', urlToken); history.replaceState({}, '', location.pathname); }
 
   // Handle post-checkout redirect
-  if (params.get('subscribed') === '1') {
+  if (params.get('subscribed') === '1' || params.get('upgraded') === '1') {
     localStorage.setItem('sub_just_subscribed', '1');
   }
 
@@ -1289,6 +1303,14 @@ function render(data) {
   const loc = data.user?.location || (profile?.city ? `${profile.city}, ${profile.state}` : '');
   let   h   = '';
 
+  // ── AI Morning Summary ──
+  if (data.morning_summary) {
+    h += `<div class="section" id="sec-morning-summary" style="background:linear-gradient(135deg,rgba(240,192,64,.07) 0%,rgba(240,192,64,.02) 100%);border:1px solid rgba(240,192,64,.18);border-radius:14px;padding:18px 20px;margin-bottom:4px">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:rgba(240,192,64,.7);font-weight:700;margin-bottom:10px">☀️ Good Morning</div>
+      <div style="font-size:15px;line-height:1.65;color:var(--text,#f0f0f0)">${data.morning_summary.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+    </div>`;
+  }
+
   // ── Weather + alerts ──
   const w = s.weather;
   if (w?.current) {
@@ -1341,6 +1363,35 @@ function render(data) {
             </div>`).join('')}
         </div>
       </div>
+    </div>`;
+  }
+
+  // ── Calendar ──
+  const cal = s.calendar || [];
+  if (cal.length) {
+    h += `<div class="section" id="sec-calendar">
+      <div class="sec-header"><span class="sec-title">📅 Today's Schedule</span><span class="sec-meta">${cal.length} event${cal.length !== 1 ? 's' : ''}</span></div>
+      <div class="calendar-stack">
+        ${cal.map(evt => {
+          const startTime = evt.start ? new Date(evt.start).toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'}) : 'All day';
+          return `<div class="calendar-card">
+            <div class="cal-time">${startTime}</div>
+            <div class="cal-details">
+              <div class="cal-title">${evt.title}</div>
+              ${evt.location ? `<div class="cal-location">📍 ${evt.location}</div>` : ''}
+              <div class="cal-source" style="font-size:11px;color:var(--muted)">${evt.source || 'Calendar'}</div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+      ${!data.user?.google_calendar_connected ? `
+        <div style="margin-top:12px;padding:12px;background:var(--s1);border-radius:10px">
+          <button onclick="connectCalendar()" style="width:100%;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">
+            📅 Connect Google Calendar
+          </button>
+          <div style="font-size:12px;color:var(--muted);margin-top:6px;text-align:center">or add an ICS URL in settings</div>
+        </div>
+      ` : ''}
     </div>`;
   }
 
@@ -1917,6 +1968,11 @@ function renderSubstackList(feeds) {
 function connectX() {
   const token = localStorage.getItem('briefing_token');
   window.location.href = `${API}/api/auth/twitter/start?token=${token}`;
+}
+
+function connectCalendar() {
+  const token = localStorage.getItem('briefing_token');
+  window.location.href = `${API}/api/auth/google/start?token=${token}`;
 }
 
 // ── Pro Upgrade Modal ─────────────────────────────────────────────
