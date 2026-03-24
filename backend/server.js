@@ -26,6 +26,7 @@ const { registerTwitterAuthRoutes } = require('./oauth-twitter');
 const { registerGoogleAuthRoutes } = require('./oauth-google');
 const { getCalendarEvents } = require('./calendar');
 const payments = require('./payments');
+const { generateMorningSummary, enhanceHeadlines } = require('./ai-summary');
 
 const app  = express();
 const PORT = process.env.PORT || 3001;
@@ -41,20 +42,39 @@ function isUserPro(user) {
   return new Date() < trialEnd;
 }
 
+const ALLOWED_ORIGINS_ENV = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim())
+  : [];
+
 app.use(cors({
-  origin: [
-    'https://mydailybriefing.app',
-    'https://www.mydailybriefing.app',
-    'https://mydailybriefing.surge.sh',
-    'http://localhost:3000',
-    'http://localhost:5500',
-    'http://127.0.0.1:5500',
-    /trycloudflare\.com$/,
-    /surge\.sh$/,
-  ],
+  origin: (origin, cb) => {
+    const allowed = [
+      'https://mydailybriefing.app',
+      'https://www.mydailybriefing.app',
+      'https://mydailybriefing-api-production.up.railway.app',
+      'http://localhost:3000',
+      'http://localhost:5500',
+      'http://127.0.0.1:5500',
+      ...ALLOWED_ORIGINS_ENV,
+    ];
+    if (!origin || allowed.includes(origin) || /trycloudflare\.com$/.test(origin)) {
+      cb(null, true);
+    } else {
+      cb(null, false);
+    }
+  },
   credentials: true,
 }));
 app.use(express.json());
+
+// ── Serve frontend static files ───────────────────────────────────
+const publicDir = path.join(__dirname, 'public');
+if (require('fs').existsSync(publicDir)) {
+  app.use(express.static(publicDir));
+  // SPA fallback for root
+  app.get('/', (req, res) => res.sendFile(path.join(publicDir, 'index.html')));
+}
+
 registerTwitterAuthRoutes(app);
 registerGoogleAuthRoutes(app);
 
@@ -529,12 +549,20 @@ app.get('/api/users/:token/briefing', async (req, res) => {
       localNewsItems
     );
 
+    // Generate AI morning summary (non-blocking, fails gracefully)
+    let morning_summary = null;
+    try {
+      const summaryData = { weather, markets, local_news, national_news: national_deduped };
+      morning_summary = await generateMorningSummary(summaryData, user.email?.split('@')[0]);
+    } catch (_) {}
+
     res.json({
       generated_at: new Date().toISOString(),
       user: {
         email:    user.email,
         location: geoData.displayName || `${geoData.city}, ${geoData.state}`,
       },
+      morning_summary,
       sections: {
         weather,
         markets,
@@ -657,3 +685,89 @@ app.listen(PORT, () => {
 });
 
 module.exports = app;
+
+// ─────────────────────────────────────────────
+//  Waitlist endpoint
+// ─────────────────────────────────────────────
+app.post('/api/waitlist', async (req, res) => {
+  try {
+    const { email, zip_code, source } = req.body;
+    if (!email) return res.status(400).json({ error: 'email required' });
+
+    // Check if already a full user
+    const existing = db.getUserByEmail(email);
+    if (existing) {
+      return res.json({ status: 'already_registered', token: existing.token });
+    }
+
+    // Store in waitlist table
+    db.db.exec(`CREATE TABLE IF NOT EXISTS waitlist (
+      id TEXT PRIMARY KEY,
+      email TEXT UNIQUE NOT NULL,
+      zip_code TEXT,
+      source TEXT,
+      created_at TEXT NOT NULL
+    )`);
+    
+    const id = require('uuid').v4();
+    try {
+      db.db.prepare('INSERT INTO waitlist (id, email, zip_code, source, created_at) VALUES (?, ?, ?, ?, ?)')
+        .run(id, email.toLowerCase().trim(), zip_code || null, source || 'direct', new Date().toISOString());
+    } catch (e) {
+      if (e.message.includes('UNIQUE')) {
+        return res.json({ status: 'already_waitlisted' });
+      }
+      throw e;
+    }
+
+    console.log(`[waitlist] New signup: ${email} from ${source || 'direct'}`);
+    res.json({ status: 'waitlisted', message: 'You\'re on the list!' });
+  } catch (e) {
+    console.error('[waitlist]', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /api/waitlist/count — public count for social proof
+app.get('/api/waitlist/count', (req, res) => {
+  try {
+    db.db.exec(`CREATE TABLE IF NOT EXISTS waitlist (id TEXT PRIMARY KEY, email TEXT UNIQUE NOT NULL, zip_code TEXT, source TEXT, created_at TEXT NOT NULL)`);
+    const users = db.db.prepare('SELECT COUNT(*) as count FROM users').get();
+    const wl = db.db.prepare('SELECT COUNT(*) as count FROM waitlist').get();
+    res.json({ total: (users?.count || 0) + (wl?.count || 0) });
+  } catch (e) {
+    res.json({ total: 0 });
+  }
+});
+
+// ─────────────────────────────────────────────
+//  SEO City Landing Pages
+// ─────────────────────────────────────────────
+const { SEO_CITIES, renderCityPage } = require('./seo');
+
+app.get('/cities/:slug', (req, res) => {
+  const city = SEO_CITIES.find(c => c.slug === req.params.slug);
+  if (!city) return res.status(404).send('City not found');
+  res.setHeader('Content-Type', 'text/html');
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+  res.send(renderCityPage(city));
+});
+
+app.get('/cities', (req, res) => {
+  const links = SEO_CITIES.map(c => 
+    `<li><a href="/cities/${c.slug}">${c.city}, ${c.state}</a></li>`
+  ).join('\n');
+  res.setHeader('Content-Type', 'text/html');
+  res.send(`<!DOCTYPE html><html><body><h1>Browse by City</h1><ul>${links}</ul></body></html>`);
+});
+
+app.get('/sitemap-cities.xml', (req, res) => {
+  const urls = SEO_CITIES.map(c => `
+  <url>
+    <loc>https://mydailybriefing.app/cities/${c.slug}</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>`).join('');
+  res.setHeader('Content-Type', 'application/xml');
+  res.send(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>`);
+});
