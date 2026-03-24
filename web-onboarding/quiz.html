@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0d0d0d" />
+  <title>What Kind of News Person Are You? — My Daily Briefing</title>
+  <meta name="description" content="Take the 60-second quiz and get a personalized morning briefing built for how you actually consume news." />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d0d0d; --surface: #161616; --s2: #1e1e1e;
+      --border: #252525; --accent: #f0c040; --text: #f0f0f0;
+      --t2: #b0b0b0; --muted: #666;
+      --green: #4db86a; --blue: #4a9eff; --red: #e05050;
+    }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 24px 16px 80px; -webkit-font-smoothing: antialiased; }
+    .logo { font-size: 13px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-bottom: 32px; margin-top: 8px; }
+    .quiz-wrap { width: 100%; max-width: 520px; }
+    .progress-bar { height: 3px; background: var(--border); border-radius: 3px; margin-bottom: 32px; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width .4s ease; }
+    .question { display: none; }
+    .question.active { display: block; }
+    .q-num { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 10px; }
+    .q-text { font-size: 24px; font-weight: 800; letter-spacing: -.3px; line-height: 1.25; margin-bottom: 28px; }
+    .options { display: flex; flex-direction: column; gap: 10px; }
+    .option {
+      padding: 14px 18px; border: 1.5px solid var(--border); border-radius: 12px;
+      background: var(--surface); cursor: pointer; font-size: 15px; font-weight: 500;
+      transition: border-color .15s, background .15s, transform .1s;
+      text-align: left;
+    }
+    .option:hover { border-color: var(--accent); background: var(--s2); transform: translateX(3px); }
+    .option.selected { border-color: var(--accent); background: rgba(240,192,64,.08); }
+    .option .opt-icon { margin-right: 10px; }
+    .option .opt-label { font-size: 13px; color: var(--t2); display: block; margin-top: 2px; font-weight: 400; }
+
+    /* Result screen */
+    .result { display: none; text-align: center; }
+    .result.active { display: block; }
+    .result-badge { font-size: 56px; margin-bottom: 12px; }
+    .result-type { font-size: 28px; font-weight: 800; letter-spacing: -.4px; margin-bottom: 8px; color: var(--accent); }
+    .result-desc { font-size: 15px; color: var(--t2); line-height: 1.6; margin-bottom: 28px; max-width: 400px; margin-left: auto; margin-right: auto; }
+    .result-sections { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 28px; }
+    .result-chip { padding: 6px 14px; border-radius: 20px; background: var(--s2); border: 1px solid var(--border); font-size: 13px; font-weight: 600; }
+    .cta-text { font-size: 14px; color: var(--t2); margin-bottom: 16px; }
+    .btn-primary {
+      display: block; width: 100%; max-width: 360px; margin: 0 auto;
+      padding: 16px; background: var(--accent); color: #000;
+      border: none; border-radius: 12px; font-size: 16px; font-weight: 800;
+      cursor: pointer; letter-spacing: .01em; transition: filter .15s, transform .1s;
+    }
+    .btn-primary:hover { filter: brightness(1.08); transform: translateY(-1px); }
+    .skip { font-size: 13px; color: var(--muted); text-align: center; margin-top: 16px; cursor: pointer; }
+    .skip:hover { color: var(--t2); }
+  </style>
+</head>
+<body>
+  <div class="logo">📰 My Daily Briefing</div>
+  <div class="quiz-wrap">
+    <div class="progress-bar"><div class="progress-fill" id="progress" style="width:20%"></div></div>
+
+    <!-- Q1 -->
+    <div class="question active" id="q1">
+      <div class="q-num">Question 1 of 5</div>
+      <div class="q-text">What's the first thing you reach for in the morning?</div>
+      <div class="options">
+        <div class="option" onclick="answer('q1','phone','q2')">
+          <span class="opt-icon">📱</span>My phone — check news/social immediately
+          <span class="opt-label">Classic doomscroller</span>
+        </div>
+        <div class="option" onclick="answer('q1','coffee','q2')">
+          <span class="opt-icon">☕</span>Coffee — then news while it brews
+          <span class="opt-label">Ritual-driven morning person</span>
+        </div>
+        <div class="option" onclick="answer('q1','radio','q2')">
+          <span class="opt-icon">📻</span>Radio or podcast — news in the background
+          <span class="opt-label">Passive absorber</span>
+        </div>
+        <div class="option" onclick="answer('q1','nothing','q2')">
+          <span class="opt-icon">😴</span>Nothing — I avoid news until I have to
+          <span class="opt-label">Selective/anxious news consumer</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q2 -->
+    <div class="question" id="q2">
+      <div class="q-num">Question 2 of 5</div>
+      <div class="q-text">When a major story breaks, what's your reaction?</div>
+      <div class="options">
+        <div class="option" onclick="answer('q2','dive','q3')">
+          <span class="opt-icon">🔍</span>I want all the context — background, analysis, implications
+          <span class="opt-label">Deep dive mode</span>
+        </div>
+        <div class="option" onclick="answer('q2','headline','q3')">
+          <span class="opt-icon">⚡</span>Give me the headline and move on
+          <span class="opt-label">Speed reader</span>
+        </div>
+        <div class="option" onclick="answer('q2','local','q3')">
+          <span class="opt-icon">📍</span>I want to know how it affects my town/community
+          <span class="opt-label">Local-first mindset</span>
+        </div>
+        <div class="option" onclick="answer('q2','market','q3')">
+          <span class="opt-icon">📈</span>I check how it moves the market
+          <span class="opt-label">Market-watcher</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q3 -->
+    <div class="question" id="q3">
+      <div class="q-num">Question 3 of 5</div>
+      <div class="q-text">What local content would make your morning better?</div>
+      <div class="options">
+        <div class="option" onclick="answer('q3','news','q4')">
+          <span class="opt-icon">📰</span>Local news — what's happening in my city
+        </div>
+        <div class="option" onclick="answer('q3','sports','q4')">
+          <span class="opt-icon">🏈</span>Local sports — scores, standings, HS games
+        </div>
+        <div class="option" onclick="answer('q3','politics','q4')">
+          <span class="opt-icon">🏛️</span>Local politics — my reps, votes, city council
+        </div>
+        <div class="option" onclick="answer('q3','weather','q4')">
+          <span class="opt-icon">🌤️</span>Just weather — I keep it simple
+        </div>
+      </div>
+    </div>
+
+    <!-- Q4 -->
+    <div class="question" id="q4">
+      <div class="q-num">Question 4 of 5</div>
+      <div class="q-text">Which of these would you actually read every day?</div>
+      <div class="options">
+        <div class="option" onclick="answer('q4','finance','q5')">
+          <span class="opt-icon">💰</span>Markets, stocks, crypto — financial snapshot
+        </div>
+        <div class="option" onclick="answer('q4','politics','q5')">
+          <span class="opt-icon">🗳️</span>Politics — national and local, no spin
+        </div>
+        <div class="option" onclick="answer('q4','culture','q5')">
+          <span class="opt-icon">🎭</span>Culture, tech, things worth knowing about
+        </div>
+        <div class="option" onclick="answer('q4','community','q5')">
+          <span class="opt-icon">🏘️</span>Community — events, businesses, neighbors
+        </div>
+      </div>
+    </div>
+
+    <!-- Q5 -->
+    <div class="question" id="q5">
+      <div class="q-num">Question 5 of 5</div>
+      <div class="q-text">How long do you actually want to spend on your morning briefing?</div>
+      <div class="options">
+        <div class="option" onclick="answer('q5','60sec','result')">
+          <span class="opt-icon">⚡</span>Under 60 seconds — headlines only
+          <span class="opt-label">Bullet mode</span>
+        </div>
+        <div class="option" onclick="answer('q5','3min','result')">
+          <span class="opt-icon">☕</span>2-3 minutes — a solid morning read
+          <span class="opt-label">The sweet spot</span>
+        </div>
+        <div class="option" onclick="answer('q5','10min','result')">
+          <span class="opt-icon">📖</span>5-10 minutes — I want depth
+          <span class="opt-label">Full briefing mode</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Result -->
+    <div class="result" id="result">
+      <div class="result-badge" id="result-badge">📰</div>
+      <div class="result-type" id="result-type">The Local Insider</div>
+      <div class="result-desc" id="result-desc">You care about what's actually happening in your community — not cable news drama.</div>
+      <div class="result-sections" id="result-sections"></div>
+      <div class="cta-text">Your personalized briefing is ready to build →</div>
+      <button class="btn-primary" id="cta-btn" onclick="goToOnboarding()">Build My Briefing — Free</button>
+      <div class="skip" onclick="goToOnboarding()">Skip quiz — go straight to setup</div>
+    </div>
+  </div>
+
+<script>
+const answers = {};
+
+const PROFILES = {
+  local: {
+    badge: '📍',
+    type: 'The Local Insider',
+    desc: "You care about what's actually happening in your community — not cable news drama. Your briefing leads with local news, city politics, and what's happening in your neighborhood.",
+    sections: ['Local News','Weather','City Politics','Community','HS Sports'],
+    interests: ['local news','community','politics'],
+  },
+  finance: {
+    badge: '📈',
+    type: 'The Market Watcher',
+    desc: "You start the day by checking what moved overnight. Markets, earnings, macro — you want the financial picture before anything else.",
+    sections: ['Markets','Finance News','Economy','Crypto','Stocks'],
+    interests: ['finance','markets','crypto','economy'],
+  },
+  analyst: {
+    badge: '🔍',
+    type: 'The Analyst',
+    desc: "You don't want headlines — you want context. Your briefing goes deep on the 3-4 stories that actually matter, with background and analysis.",
+    sections: ['Top Stories','Politics','National News','Opinion','Analysis'],
+    interests: ['politics','analysis','national news'],
+  },
+  speed: {
+    badge: '⚡',
+    type: 'The Speed Reader',
+    desc: "You need to be informed without the noise. Your briefing is tight, scannable, and takes under 90 seconds.",
+    sections: ['Headlines','Weather','Markets','Local'],
+    interests: ['news','weather'],
+  },
+  culture: {
+    badge: '🎭',
+    type: 'The Cultural Observer',
+    desc: "Tech, culture, ideas — you want to know what's shaping the world beyond politics and finance.",
+    sections: ['Culture & Tech','National News','Science','Entertainment','Weather'],
+    interests: ['technology','culture','science'],
+  },
+};
+
+function getProfile() {
+  // Simple scoring
+  const scores = { local: 0, finance: 0, analyst: 0, speed: 0, culture: 0 };
+  if (answers.q1 === 'nothing') scores.speed++;
+  if (answers.q2 === 'dive')    scores.analyst += 2;
+  if (answers.q2 === 'headline') scores.speed += 2;
+  if (answers.q2 === 'local')   scores.local += 2;
+  if (answers.q2 === 'market')  scores.finance += 2;
+  if (answers.q3 === 'news')    scores.local++;
+  if (answers.q3 === 'sports')  scores.local++;
+  if (answers.q3 === 'politics') scores.analyst++;
+  if (answers.q4 === 'finance') scores.finance += 2;
+  if (answers.q4 === 'politics') scores.analyst++;
+  if (answers.q4 === 'culture') scores.culture += 2;
+  if (answers.q4 === 'community') scores.local += 2;
+  if (answers.q5 === '60sec')   scores.speed++;
+  if (answers.q5 === '10min')   scores.analyst++;
+  const top = Object.entries(scores).sort((a,b) => b[1]-a[1])[0][0];
+  return PROFILES[top] || PROFILES.speed;
+}
+
+function answer(qId, val, next) {
+  answers[qId] = val;
+  // Deselect others, select this
+  document.querySelectorAll(`#${qId} .option`).forEach(o => o.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
+
+  setTimeout(() => {
+    document.getElementById(qId).classList.remove('active');
+    const nextEl = document.getElementById(next);
+    nextEl.classList.add('active');
+
+    // Update progress
+    const steps = ['q1','q2','q3','q4','q5','result'];
+    const idx = steps.indexOf(next);
+    document.getElementById('progress').style.width = ((idx+1)/steps.length*100) + '%';
+
+    if (next === 'result') showResult();
+  }, 200);
+}
+
+function showResult() {
+  const profile = getProfile();
+  document.getElementById('result-badge').textContent = profile.badge;
+  document.getElementById('result-type').textContent = profile.type;
+  document.getElementById('result-desc').textContent = profile.desc;
+  const chips = document.getElementById('result-sections');
+  chips.innerHTML = profile.sections.map(s => `<span class="result-chip">${s}</span>`).join('');
+  // Store for onboarding pre-fill
+  sessionStorage.setItem('quiz_profile', JSON.stringify({ type: profile.type, interests: profile.interests }));
+}
+
+function goToOnboarding() {
+  // Pre-fill interests from quiz result
+  const profile = JSON.parse(sessionStorage.getItem('quiz_profile') || '{}');
+  const params = new URLSearchParams();
+  if (profile.interests) params.set('interests', profile.interests.join(','));
+  params.set('from', 'quiz');
+  window.location.href = '/?' + params.toString();
+}
+</script>
+</body>
+</html>

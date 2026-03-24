@@ -554,22 +554,21 @@
     .stocks-addon { margin-top: 24px; border-top: 1px solid var(--border); padding-top: 16px; }
     .stocks-addon-label { font-size: 13px; font-weight: 600; color: var(--t2); text-transform: uppercase; letter-spacing: .06em; }
     .stocks-addon-hint { font-weight: 400; text-transform: none; color: var(--muted); }
-    .go-deeper-row { margin-top: 12px; }
-    .go-deeper-link { font-size: 12px; color: var(--accent); cursor: pointer; font-weight: 600; letter-spacing: .02em; }
-    .go-deeper-link:hover { opacity: .8; }
-    .connect-x-btn {
-      width: 100%; padding: 10px 14px; border-radius: 10px;
-      background: var(--s2); border: 1px solid var(--border);
-      color: var(--muted); font-size: 13px; cursor: not-allowed;
-      display: flex; align-items: center; gap: 8px;
-      text-align: left;
+    .connect-socials-btn {
+      width: 100%; padding: 14px 18px; border-radius: 14px; margin-top: 16px;
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+      border: none; color: #fff; font-size: 15px; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; gap: 10px;
+      text-align: left; transition: opacity .15s;
     }
-    .connect-x-btn span:first-child { font-size: 15px; font-weight: 900; }
-    .coming-soon-tag {
-      margin-left: auto; font-size: 10px; background: var(--border);
-      color: var(--muted); padding: 2px 7px; border-radius: 100px;
-      letter-spacing: .05em; text-transform: uppercase;
-    }
+    .connect-socials-btn:hover { opacity: .88; }
+    .connect-socials-btn .cs-icon { font-size: 20px; flex-shrink: 0; }
+    .connect-socials-btn .cs-text { flex: 1; }
+    .connect-socials-btn .cs-sub { font-size: 12px; font-weight: 400; opacity: .75; display: block; margin-top: 1px; }
+    .connect-socials-btn .cs-badge { font-size: 10px; background: #1d9bf0; color: #fff; padding: 3px 8px; border-radius: 99px; letter-spacing: .04em; flex-shrink: 0; }
+    .go-deeper-row { display: none; }
+    .connect-x-btn { display: none; }
+    .coming-soon-tag { display: none; }
     .acct-suggest-chip {
       display: flex; flex-direction: column;
       padding: 6px 12px; border-radius: 100px;
@@ -606,10 +605,10 @@
   </p>
 
   <div class="cta-row">
-    <button class="btn-primary" onclick="startOnboarding()">Build My Brief →</button>
-    <button class="btn-ghost" onclick="location.href='https://mydailybriefing.app/briefing.html?token=1aac8456-582b-4fd0-87c7-d0ce1d8c59e1'">See an example</button>
+    <button class="btn-primary" onclick="location.href='/quiz.html'">Find My Briefing Type →</button>
+    <button class="btn-ghost" onclick="startOnboarding()">Quick setup (no quiz)</button>
   </div>
-  <div class="beta-note">Join the waitlist — free during beta</div>
+  <div class="beta-note">60-second quiz · Free during beta</div>
 
   <div class="social-proof-row">
     <div class="proof-item">Built around your ZIP code</div>
@@ -679,6 +678,24 @@
     <p class="step-hint">Your ZIP code powers local news, weather, politics, and high school sports.</p>
     <input class="field" id="zip-input" type="tel" maxlength="5" placeholder="Enter your ZIP code" inputmode="numeric" />
     <div class="field-confirm" id="zip-confirm"></div>
+
+    <!-- Additional locations -->
+    <div id="extra-zips-section" style="display:none;margin-top:16px">
+      <div style="font-size:13px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Also follow</div>
+      <div id="extra-zip-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+      <div style="display:flex;gap:8px">
+        <input id="extra-zip-input" type="tel" maxlength="5" inputmode="numeric" placeholder="Another ZIP code"
+          style="flex:1;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;background:var(--s2);color:var(--t1);font-size:14px"
+          onkeydown="if(event.key==='Enter')addExtraZip()" />
+        <button onclick="addExtraZip()" style="padding:10px 16px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer">Add</button>
+      </div>
+    </div>
+
+    <div id="add-location-link" style="display:none;margin-top:12px">
+      <span onclick="document.getElementById('extra-zips-section').style.display='block';document.getElementById('add-location-link').style.display='none';document.getElementById('extra-zip-input').focus()"
+        style="font-size:13px;color:var(--accent);cursor:pointer;font-weight:600">+ Add another location</span>
+    </div>
+
     <div class="nav-row">
       <button class="btn-next" id="zip-next" onclick="nextStep()" disabled>Continue →</button>
     </div>
@@ -697,20 +714,21 @@
     </div>
 
     <div class="stocks-addon" id="voices-section" style="margin-top:20px">
-      <div class="stocks-addon-label">Voices to follow <span class="stocks-addon-hint">(optional — pulled into your briefing)</span></div>
-      <p style="font-size:12px;color:var(--muted);margin:6px 0 10px">Based on your interests — tap to add.</p>
+      <div class="stocks-addon-label">Voices to follow <span class="stocks-addon-hint">(optional)</span></div>
+      <p style="font-size:12px;color:var(--muted);margin:6px 0 10px">Based on your interests — tap to add, or connect your socials below.</p>
       <div class="chips" id="suggested-account-chips"></div>
       <div class="chips" id="twitter-chips" style="margin-top:8px"></div>
-      <div class="go-deeper-row">
-        <span class="go-deeper-link" id="go-deeper-toggle" onclick="toggleDeeperMode()">Go deeper →</span>
-      </div>
       <div id="deeper-panel" style="display:none;margin-top:12px">
         <input class="field" id="twitter-input" type="text" inputmode="url" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="@handle (space or enter to add)" style="margin-bottom:8px" />
-        <button class="connect-x-btn" disabled title="Coming soon">
-          <span>𝕏</span> Connect X account to import your follows
-          <span class="coming-soon-tag">Soon</span>
-        </button>
       </div>
+      <button class="connect-socials-btn" onclick="skipToConnectSocials()">
+        <span class="cs-icon">🔗</span>
+        <span class="cs-text">
+          Connect your socials
+          <span class="cs-sub">X timeline · Newsletters · Substack — added after setup</span>
+        </span>
+        <span class="cs-badge">After setup</span>
+      </button>
     </div>
 
     <div class="nav-row">
@@ -760,7 +778,7 @@
 </div>
 
 <script>
-const API = 'https://mydailybriefing-api-production.up.railway.app';
+const API = window.location.hostname === 'localhost' ? 'http://localhost:3001' : 'https://mydailybriefing-api-production.up.railway.app';
 
 const INTERESTS = [
   { label: '💼 Finance', value: 'finance' },
@@ -870,6 +888,7 @@ let state = {
   zip: '', city: '', stateCode: '', lat: null, lng: null,
   email: '', interests: [], sports_teams: [], hs_teams: [],
   stocks: [...DEFAULT_STOCKS], twitter_handles: [], token: '',
+  extra_zips: [],  // additional locations
 };
 
 // ── Init ──
@@ -885,6 +904,26 @@ document.addEventListener('DOMContentLoaded', () => {
   if (tok) {
     document.getElementById('landing').style.display = 'none';
     location.href = 'briefing.html?token=' + tok;
+    return;
+  }
+
+  // Pre-fill from quiz if coming from quiz.html
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('from') === 'quiz') {
+    const quizInterests = params.get('interests');
+    if (quizInterests) {
+      // Pre-select chips matching quiz interests
+      const interestList = quizInterests.split(',').map(i => i.trim().toLowerCase());
+      document.querySelectorAll('#interests-chips .chip').forEach(chip => {
+        const val = (chip.dataset.value || chip.textContent || '').toLowerCase();
+        if (interestList.some(i => val.includes(i) || i.includes(val))) {
+          chip.classList.add('selected');
+          chip.setAttribute('aria-pressed', 'true');
+        }
+      });
+    }
+    // Jump straight to onboarding (skip landing)
+    startOnboarding();
   }
 });
 
@@ -915,7 +954,28 @@ function showStep(n) {
   }
 }
 async function nextStep() {
+  // On step 2 → 3: collect interests/stocks and kick off prefetch
+  if (step === 2) {
+    collectStep2State();
+    // If user already has a token (returning), skip straight to building
+    if (state.token) { finishSignup(); return; }
+    // Pre-warm: store partial state so email step can be quick
+    window._prefetchReady = false;
+  }
   if (step < totalSteps) { step++; showStep(step); updateProgress(); }
+}
+
+function collectStep2State() {
+  const stocksVal = document.getElementById('stocks-input')?.value.trim().toUpperCase();
+  if (stocksVal) {
+    stocksVal.split(/[\s,]+/).map(s => s.replace(/[^A-Z0-9\-]/g,'')).filter(Boolean)
+      .forEach(s => { if (!state.stocks.includes(s)) state.stocks.push(s); });
+  }
+  const twitterVal = document.getElementById('twitter-input')?.value.trim();
+  if (twitterVal) {
+    twitterVal.split(/[\s,@]+/).map(h => h.replace(/[^A-Za-z0-9_]/g,'')).filter(Boolean)
+      .forEach(h => { if (!state.twitter_handles.includes(h)) state.twitter_handles.push(h); });
+  }
 }
 function prevStep() {
   if (step > 1) { step--; showStep(step); updateProgress(); }
@@ -1046,6 +1106,7 @@ async function finishSignup() {
           hs_teams: [],
           stocks: state.stocks,
           twitter_handles: state.twitter_handles,
+          saved_locations: state.extra_zips.map(z => ({ zip: z })),
         }),
       });
       const data = await res.json();
@@ -1100,13 +1161,46 @@ async function validateZip(zip) {
     el.textContent = `✓ ${data.city}, ${data.state}`;
     el.className = 'field-confirm';
     document.getElementById('zip-next').disabled = false;
+    // Show "add another location" option
+    document.getElementById('add-location-link').style.display = 'block';
     // Auto-advance after short delay — no click needed
-    setTimeout(() => nextStep(), 600);
+    setTimeout(() => nextStep(), 900);
   } catch {
     el.textContent = 'ZIP not found — try another';
     el.className = 'field-error';
     document.getElementById('zip-next').disabled = true;
   }
+}
+
+// ── Extra ZIPs ──
+async function addExtraZip() {
+  const inp = document.getElementById('extra-zip-input');
+  const zip = (inp?.value || '').replace(/\D/g,'').slice(0,5);
+  if (zip.length !== 5 || zip === state.zip || state.extra_zips.includes(zip)) {
+    inp.value = ''; return;
+  }
+  inp.value = 'Checking…';
+  try {
+    const res = await fetch(`${API}/api/geo/zip/${zip}`);
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    state.extra_zips.push(zip);
+    inp.value = '';
+    const chips = document.getElementById('extra-zip-chips');
+    const chip = document.createElement('div');
+    chip.style.cssText = 'display:flex;align-items:center;gap:5px;padding:5px 10px;background:var(--accent);color:#fff;border-radius:99px;font-size:13px;font-weight:600';
+    chip.innerHTML = `${data.city}, ${data.state} <span onclick="removeExtraZip('${zip}',this.parentElement)" style="cursor:pointer;opacity:.7;font-size:16px;line-height:1">×</span>`;
+    chips.appendChild(chip);
+  } catch {
+    inp.value = '';
+    inp.placeholder = 'ZIP not found';
+    setTimeout(() => inp.placeholder = 'Another ZIP code', 2000);
+  }
+}
+
+function removeExtraZip(zip, el) {
+  state.extra_zips = state.extra_zips.filter(z => z !== zip);
+  el?.remove();
 }
 
 // ── Interests ──
@@ -1154,11 +1248,15 @@ function buildSuggestedAccountChips() {
 
 function toggleDeeperMode() {
   const panel = document.getElementById('deeper-panel');
-  const toggle = document.getElementById('go-deeper-toggle');
+  if (!panel) return;
   const open = panel.style.display === 'none';
   panel.style.display = open ? 'block' : 'none';
-  toggle.textContent = open ? '← Less' : 'Go deeper →';
   if (open) document.getElementById('twitter-input')?.focus();
+}
+
+function skipToConnectSocials() {
+  // Continue to signup, we'll surface Connect Accounts panel post-briefing
+  nextStep();
 }
 
 function buildInterestChips() {
