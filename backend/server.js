@@ -112,6 +112,49 @@ app.get('/api/geo/accounts', async (req, res) => {
   }
 });
 
+// GET /api/geo/reverse?lat=...&lng=...
+app.get('/api/geo/reverse', async (req, res) => {
+  try {
+    const { lat, lng } = req.query;
+    if (!lat || !lng) return res.status(400).json({ error: 'lat and lng required' });
+
+    // Use the Census Bureau reverse geocoder (free, no key needed)
+    const censusUrl = `https://geocoding.geo.census.gov/geocoder/geographies/coordinates?x=${lng}&y=${lat}&benchmark=Public_AR_Current&vintage=Current_Current&format=json`;
+    const censusRes = await require('node-fetch')(censusUrl);
+    if (censusRes.ok) {
+      const data = await censusRes.json();
+      const geo = data?.result?.geographies?.['Incorporated Places']?.[0]
+                || data?.result?.geographies?.['Census Designated Places']?.[0];
+      const state = data?.result?.geographies?.['States']?.[0];
+      const zips = data?.result?.geographies?.['ZIP Code Tabulation Areas']?.[0];
+      const city = geo?.NAME || state?.NAME || '';
+      const stateAbbr = state?.STUSAB || state?.STATE || '';
+      const zip = zips?.ZCTA5CE || zips?.GEOID || '';
+      if (city || zip) {
+        return res.json({ city, state: stateAbbr, zip, lat: parseFloat(lat), lng: parseFloat(lng) });
+      }
+    }
+
+    // Fallback: use NWS points API (already used in the codebase)
+    const nwsRes = await require('node-fetch')(
+      `https://api.weather.gov/points/${lat},${lng}`,
+      { headers: { 'User-Agent': 'BriefingApp/1.0 contact@example.com' } }
+    );
+    if (!nwsRes.ok) throw new Error('Reverse geocoding failed');
+    const nwsData = await nwsRes.json();
+    const props = nwsData.properties;
+    res.json({
+      city: props.relativeLocation?.properties?.city || '',
+      state: props.relativeLocation?.properties?.state || '',
+      zip: '',
+      lat: parseFloat(lat),
+      lng: parseFloat(lng),
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ─────────────────────────────────────────────
 //  User endpoints
 // ─────────────────────────────────────────────
@@ -174,7 +217,7 @@ app.get('/api/users/:token/profile', (req, res) => {
 app.post('/api/users/:token/substack', (req, res) => {
   const user = db.getUserByToken(req.params.token);
   if (!user) return res.status(404).json({ error: 'User not found' });
-  const url = normalizeUrl(req.body.url);
+  const url = normalizeFeedUrl(req.body.url);
   if (!url) return res.status(400).json({ error: 'Invalid URL' });
   const feeds = JSON.parse(user.substack_feeds || '[]');
   if (!feeds.includes(url)) feeds.push(url);
@@ -186,7 +229,7 @@ app.post('/api/users/:token/substack', (req, res) => {
 app.delete('/api/users/:token/substack', (req, res) => {
   const user = db.getUserByToken(req.params.token);
   if (!user) return res.status(404).json({ error: 'User not found' });
-  const url = normalizeUrl(req.body.url) || req.body.url;
+  const url = normalizeFeedUrl(req.body.url) || req.body.url;
   const feeds = JSON.parse(user.substack_feeds || '[]').filter(f => f !== url);
   db.updateUser(req.params.token, { substack_feeds: JSON.stringify(feeds) });
   res.json({ substack_feeds: feeds });
@@ -371,30 +414,6 @@ app.get('/api/users/:token/calendar', async (req, res) => {
     console.error('Calendar route error:', error);
     res.status(500).json({ error: error.message });
   }
-});
-
-app.get('/api/users/:token/subscription', (req, res) => {
-  const user = db.getUserByToken(req.params.token);
-  if (!user) return res.status(404).json({ error: 'User not found' });
-
-  const trialEnd = new Date(user.created_at);
-  trialEnd.setDate(trialEnd.getDate() + 14);
-  const now = new Date();
-  const proActive = isUserPro(user);
-  const isTrial = !user.is_pro && now < trialEnd;
-  const trialDaysLeft = isTrial
-    ? Math.max(0, Math.ceil((trialEnd.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)))
-    : 0;
-
-  res.json({
-    isPro: proActive,
-    isTrial,
-    trialDaysLeft,
-    features: {
-      socialConnected: Boolean(user.twitter_access_token || (user.substack_feeds || []).length),
-      unlimitedLocations: proActive,
-    },
-  });
 });
 
 // ─────────────────────────────────────────────
