@@ -26,7 +26,9 @@ const { registerTwitterAuthRoutes } = require('./oauth-twitter');
 const { registerGoogleAuthRoutes } = require('./oauth-google');
 const { getCalendarEvents } = require('./calendar');
 const payments = require('./payments');
+const stripe   = require('./stripe');   // new Stripe module (stripe.js)
 const { generateMorningSummary, enhanceHeadlines } = require('./ai-summary');
+const { registerReferralRoutes } = require('./referral');
 
 const app  = express();
 const PORT = process.env.PORT || 3001;
@@ -77,6 +79,7 @@ if (require('fs').existsSync(publicDir)) {
 
 registerTwitterAuthRoutes(app);
 registerGoogleAuthRoutes(app);
+registerReferralRoutes(app);
 
 // ─────────────────────────────────────────────
 //  Health check
@@ -262,17 +265,14 @@ app.get('/api/users/:token/subscription', (req, res) => {
 });
 
 // POST /api/checkout — create Stripe checkout session
+// Body: { token: string, priceId?: string }
+// Uses stripe.js (which updates is_pro); falls back to payments.js if stripe.js fails.
 app.post('/api/checkout', async (req, res) => {
   try {
-    const { token } = req.body;
+    const { token, priceId } = req.body;
     if (!token) return res.status(400).json({ error: 'token required' });
-    const origin = req.headers.origin || 'https://mydailybriefing.app';
-    const result = await payments.createCheckoutSession(
-      db.db,
-      token,
-      `${origin}/briefing.html?token=${token}&upgraded=1`,
-      `${origin}/briefing.html?token=${token}`
-    );
+    // TODO: Steven — ensure STRIPE_SECRET_KEY and STRIPE_PRICE_ID are set in env
+    const result = await stripe.createCheckoutSession(token, priceId);
     res.json(result);
   } catch (err) {
     console.error('[checkout]', err.message);
@@ -296,7 +296,7 @@ app.post('/api/portal/:token', async (req, res) => {
   }
 });
 
-// POST /api/webhook — Stripe webhook (raw body required)
+// POST /api/webhook — Stripe webhook (raw body required) [legacy payments.js path]
 app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   try {
     const sig = req.headers['stripe-signature'];
@@ -304,6 +304,22 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
     res.json(result);
   } catch (err) {
     console.error('[webhook]', err.message);
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// POST /api/webhooks/stripe — Stripe webhook via stripe.js (updates is_pro in DB)
+// TODO: Steven — register THIS URL in Stripe Dashboard → Developers → Webhooks
+//       e.g. https://mydailybriefing-api-production.up.railway.app/api/webhooks/stripe
+//       Events to enable: checkout.session.completed, customer.subscription.deleted,
+//                         customer.subscription.updated, invoice.payment_failed
+app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
+  try {
+    const sig = req.headers['stripe-signature'];
+    const result = await stripe.handleWebhook(req.body, sig);
+    res.json(result);
+  } catch (err) {
+    console.error('[webhooks/stripe]', err.message);
     res.status(400).json({ error: err.message });
   }
 });
@@ -689,6 +705,41 @@ async function getLegacySection(name) {
 }
 
 // ─────────────────────────────────────────────
+//  Admin
+// ─────────────────────────────────────────────
+
+// POST /api/admin/send-digest
+// Requires Authorization: Bearer <ADMIN_SECRET>
+app.post('/api/admin/send-digest', async (req, res) => {
+  try {
+    const adminSecret = process.env.ADMIN_SECRET;
+    if (!adminSecret) {
+      return res.status(500).json({ error: 'ADMIN_SECRET is not configured on this server' });
+    }
+
+    // Validate Authorization header
+    const authHeader = req.headers['authorization'] || '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+    if (!token || token !== adminSecret) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { sendDailyDigest } = require('./email-digest');
+    const result = await sendDailyDigest();
+
+    res.json({
+      ok: true,
+      sent:   result.sent,
+      failed: result.failed,
+      total:  result.total,
+    });
+  } catch (err) {
+    console.error('[admin/send-digest]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────
 //  Start
 // ─────────────────────────────────────────────
 app.listen(PORT, () => {
@@ -701,6 +752,8 @@ app.listen(PORT, () => {
   console.log(`  PUT  /api/users/:token/calendar-ics`);
   console.log(`  GET  /api/users/:token/briefing`);
   console.log(`  GET  /api/geo/zip/:zip`);
+  console.log(`  POST /api/referral/apply`);
+  console.log(`  GET  /api/users/:token/referral-stats`);
 });
 
 module.exports = app;

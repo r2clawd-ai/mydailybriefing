@@ -1,0 +1,1361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0d0d" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="description" content="Stop doomscrolling. Get a personalized morning briefing with local news, weather, markets, your reps, and more — built around your ZIP code. Free during beta." />
+  <meta property="og:title" content="My Daily Briefing — Your town's news, built for you" />
+  <meta property="og:description" content="Local news, weather, markets, politics, high school sports — one clean briefing every morning, personalized to your ZIP code." />
+  <meta property="og:image" content="https://mydailybriefing.app/og-image.png" />
+  <meta property="og:url" content="https://mydailybriefing.app/" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="My Daily Briefing — Your town's news, built for you" />
+  <meta name="twitter:description" content="Local news, weather, markets, and more — personalized to your ZIP. Free during beta." />
+  <meta name="twitter:image" content="https://mydailybriefing.app/og-image.png" />
+  <link rel="canonical" href="https://mydailybriefing.app/" />
+  <link rel="manifest" href="/manifest.json" />
+  <title>My Daily Briefing — Your town's news, built for you</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:      #0d0d0d;
+      --bg2:     #111111;
+      --surface: #161616;
+      --s2:      #1e1e1e;
+      --border:  #252525;
+      --b2:      #2e2e2e;
+      --accent:  #f0c040;
+      --red:     #e05050;
+      --green:   #4db86a;
+      --blue:    #4a9eff;
+      --text:    #f0f0f0;
+      --t2:      #b0b0b0;
+      --muted:   #666666;
+      --r:       12px;
+      --t:       0.18s ease;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 15px;
+      line-height: 1.55;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--accent); text-decoration: none; }
+
+    /* ─── Landing ─── */
+    .landing {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 24px 48px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(180deg, #0d0d0d 0%, #111111 100%);
+    }
+    .landing::before {
+      content: "";
+      position: absolute;
+      inset: -20%;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(240,192,64,.14), transparent 38%),
+        radial-gradient(circle at 80% 15%, rgba(74,158,255,.12), transparent 34%),
+        radial-gradient(circle at 50% 78%, rgba(77,184,106,.08), transparent 30%);
+      animation: heroGradientShift 8s ease-in-out infinite alternate;
+      pointer-events: none;
+      opacity: .85;
+    }
+    .landing > * {
+      position: relative;
+      z-index: 1;
+    }
+    .logo-mark {
+      font-size: 42px;
+      margin-bottom: 20px;
+      filter: drop-shadow(0 0 24px rgba(240,192,64,.4));
+    }
+    @keyframes heroGradientShift {
+      0% { transform: translate3d(-1.5%, -1%, 0) scale(1); }
+      100% { transform: translate3d(1.5%, 1%, 0) scale(1.05); }
+    }
+    .landing h1 {
+      font-size: clamp(28px, 7vw, 44px);
+      font-weight: 800;
+      letter-spacing: -.8px;
+      line-height: 1.15;
+      max-width: 560px;
+    }
+    .landing h1 em { font-style: normal; color: var(--accent); }
+    .landing-sub {
+      font-size: 17px;
+      color: var(--t2);
+      max-width: 440px;
+      margin: 16px auto 0;
+      line-height: 1.6;
+    }
+    /* Social proof row */
+    /* Proof row — single centered line, no wrapping chaos */
+    .social-proof-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin: 22px auto 0;
+      max-width: 420px;
+      flex-wrap: wrap;
+    }
+    .proof-item { font-size: 13px; color: var(--t2); white-space: nowrap; }
+    .proof-divider { color: var(--border2); font-size: 14px; }
+
+    /* What you get grid */
+    .what-you-get {
+      margin: 32px auto 0;
+      max-width: 440px;
+      width: 100%;
+    }
+    .wg-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .14em;
+      color: var(--muted);
+      margin-bottom: 14px;
+      text-align: center;
+    }
+    .wg-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+    }
+    .wg-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--surface);
+      border: 1px solid var(--b2);
+      border-radius: 10px;
+      padding: 11px 14px;
+      font-size: 13px;
+      color: var(--t2);
+      line-height: 1.3;
+    }
+    .wg-icon { font-size: 17px; flex-shrink: 0; width: 20px; text-align: center; }
+    .cta-row {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 36px;
+      flex-wrap: wrap;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #111;
+      font-weight: 700;
+      font-size: 16px;
+      padding: 14px 32px;
+      border-radius: 100px;
+      border: none;
+      cursor: pointer;
+      transition: filter var(--t), transform var(--t);
+    }
+    .btn-primary:hover { filter: brightness(1.08); transform: translateY(-1px); }
+    .btn-ghost {
+      background: transparent;
+      color: var(--t2);
+      font-size: 15px;
+      padding: 14px 24px;
+      border-radius: 100px;
+      border: 1px solid var(--b2);
+      cursor: pointer;
+      transition: border-color var(--t), color var(--t);
+    }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Trust strip — clean single line, no checkmarks */
+    /* ─── Spinning Newspaper ─── */
+    .newspaper-stage {
+      perspective: 600px;
+      width: 260px;
+      height: 200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .newspaper-spin {
+      width: 240px;
+      background: #f5f0e8;
+      border: 1px solid #c8b99a;
+      border-radius: 2px;
+      padding: 14px 16px 10px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.5);
+      transform-origin: center center;
+      animation: npSpin 2.6s ease-in-out infinite;
+      will-change: transform;
+    }
+    @keyframes npSpin {
+      0%   { transform: rotateY(-35deg) scale(.85); }
+      25%  { transform: rotateY(0deg)   scale(1);   }
+      50%  { transform: rotateY(35deg)  scale(.85); }
+      75%  { transform: rotateY(0deg)   scale(1);   }
+      100% { transform: rotateY(-35deg) scale(.85); }
+    }
+    .np-head {
+      font-family: 'Georgia', 'Times New Roman', serif;
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: .15em;
+      text-align: center;
+      color: #1a1208;
+      text-transform: uppercase;
+    }
+    .np-rule  { height: 2px; background: #1a1208; margin: 4px 0; }
+    .np-rule:last-of-type { height: 1px; }
+    .np-date  { font-family: 'Georgia', serif; font-size: 9px; color: #4a3c28; text-align: center; letter-spacing: .05em; }
+    .np-headline {
+      font-family: 'Georgia', 'Times New Roman', serif;
+      font-size: 13px;
+      font-weight: 900;
+      color: #1a1208;
+      text-align: center;
+      line-height: 1.25;
+      margin-top: 8px;
+      min-height: 36px;
+      transition: opacity .3s ease;
+    }
+    .np-cols { display: flex; gap: 6px; margin-top: 8px; }
+    .np-col-block {
+      flex: 1;
+      height: 32px;
+      background: repeating-linear-gradient(
+        to bottom,
+        #c8b99a 0px, #c8b99a 2px, transparent 2px, transparent 6px
+      );
+      border-radius: 1px;
+      opacity: .5;
+    }
+    .np-col-tall { height: 44px; }
+    .build-bar-wrap { height: 3px; background: var(--border); border-radius: 2px; }
+    .build-bar { height: 3px; background: var(--accent); border-radius: 2px; width: 0%; transition: width .4s ease; }
+
+    .trust-strip {
+      margin-top: 28px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: .02em;
+    }
+    .beta-note {
+      margin-top: 14px;
+      font-size: 13px;
+      color: var(--accent);
+      letter-spacing: .02em;
+    }
+    .preview-showcase {
+      padding: 0 24px 72px;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+    .preview-shell {
+      background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
+      border: 1px solid var(--b2);
+      border-radius: 24px;
+      padding: 28px;
+    }
+    .preview-kicker {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .14em;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    .preview-headline {
+      font-size: clamp(24px, 4vw, 36px);
+      font-weight: 800;
+      letter-spacing: -.04em;
+      max-width: 540px;
+      line-height: 1.1;
+    }
+    .preview-sub {
+      color: var(--t2);
+      font-size: 15px;
+      max-width: 560px;
+      margin-top: 10px;
+    }
+    .preview-grid {
+      display: grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 16px;
+      margin-top: 24px;
+    }
+    .preview-card {
+      background: #111317;
+      border: 1px solid var(--b2);
+      border-radius: 18px;
+      padding: 20px;
+      min-height: 190px;
+    }
+    .preview-card.weather {
+      background: linear-gradient(145deg, #1a2540 0%, #0f1a30 100%);
+    }
+    .preview-card.news {
+      background: linear-gradient(145deg, #171717 0%, #111111 100%);
+    }
+    .preview-card-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    .preview-temp {
+      font-size: 56px;
+      font-weight: 800;
+      letter-spacing: -.06em;
+      line-height: .95;
+    }
+    .preview-cond {
+      font-size: 22px;
+      font-weight: 700;
+      margin-top: 10px;
+    }
+    .preview-mini {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 18px;
+    }
+    .preview-mini-box {
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 12px;
+      padding: 10px 12px;
+    }
+    .preview-mini-box span {
+      display: block;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .preview-mini-box strong { font-size: 16px; }
+    .preview-story {
+      border-left: 3px solid #4a9eff;
+      padding-left: 14px;
+      margin-top: 16px;
+    }
+    .preview-story:first-of-type { margin-top: 0; }
+    .preview-story-head {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: #4a9eff;
+      margin-bottom: 6px;
+    }
+    .preview-story-title {
+      font-size: 17px;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+    .preview-story-meta {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    /* ─── Onboarding wrapper ─── */
+    #onboarding { display: none; max-width: 560px; margin: 0 auto; padding: 24px 16px 80px; min-height: 100vh; }
+
+    /* Progress bar */
+    .progress-wrap { height: 3px; background: var(--border); border-radius: 2px; margin-bottom: 32px; }
+    .progress-bar  { height: 3px; background: var(--accent); border-radius: 2px; transition: width .4s ease; }
+
+    /* Steps */
+    .step { display: none; }
+    .step.active { display: block; }
+    .step-eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 8px; }
+    .step h2 { font-size: 26px; font-weight: 800; letter-spacing: -.4px; line-height: 1.25; margin-bottom: 8px; }
+    .step-hint  { font-size: 14px; color: var(--t2); margin-bottom: 24px; }
+
+    /* Inputs */
+    .field {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--b2);
+      border-radius: var(--r);
+      padding: 14px 16px;
+      font-size: 16px;
+      color: var(--text);
+      outline: none;
+      transition: border-color var(--t);
+      margin-bottom: 10px;
+    }
+    .field:focus { border-color: var(--accent); }
+    .field::placeholder { color: var(--muted); }
+    .field-confirm { font-size: 13px; color: var(--green); min-height: 18px; margin-bottom: 16px; }
+    .field-error   { font-size: 13px; color: var(--red); min-height: 18px; margin-bottom: 16px; }
+
+    /* Tag chips */
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+    .chip {
+      padding: 8px 16px;
+      border-radius: 100px;
+      border: 1px solid var(--b2);
+      font-size: 14px;
+      cursor: pointer;
+      transition: all var(--t);
+      user-select: none;
+      background: var(--surface);
+    }
+    .chip:hover  { border-color: var(--accent); }
+    .chip.on     { background: var(--accent); color: #111; border-color: var(--accent); font-weight: 600; }
+
+    /* School chips */
+    .school-chip {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: var(--surface);
+      border: 1px solid var(--b2);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: border-color var(--t), background var(--t);
+      width: 100%;
+      text-align: left;
+    }
+    .school-chip:hover { border-color: var(--accent); }
+    .school-chip.on    { border-color: var(--accent); background: rgba(240,192,64,.08); }
+    .school-chip-name  { font-size: 14px; font-weight: 600; }
+    .school-chip-meta  { font-size: 12px; color: var(--muted); }
+    .schools-list      { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+
+    /* Nav buttons */
+    .nav-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-top: 8px;
+    }
+    .btn-next {
+      flex: 1;
+      background: var(--accent);
+      color: #111;
+      font-weight: 700;
+      font-size: 16px;
+      padding: 15px;
+      border-radius: 100px;
+      border: none;
+      cursor: pointer;
+      transition: filter var(--t);
+    }
+    .btn-next:hover    { filter: brightness(1.08); }
+    .btn-next:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-back {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 1px solid var(--b2);
+      color: var(--t2);
+      font-size: 20px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: border-color var(--t);
+      flex-shrink: 0;
+    }
+    .btn-back:hover { border-color: var(--accent); }
+    .skip-link { font-size: 13px; color: var(--muted); cursor: pointer; text-align: center; margin-top: 14px; }
+    .skip-link:hover { color: var(--t2); }
+
+    /* Preview section */
+    .preview-section { margin-top: 28px; }
+    .preview-label { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 12px; }
+    #briefing-preview { background: var(--surface); border: 1px solid var(--b2); border-radius: var(--r); padding: 20px; }
+
+    /* Preview cards */
+    .prev-section { margin-bottom: 20px; }
+    .prev-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 12px; }
+    .prev-weather-main { display: flex; align-items: flex-start; justify-content: space-between; }
+    .prev-temp { font-size: 40px; font-weight: 800; letter-spacing: -1px; }
+    .prev-temp-unit { font-size: 18px; font-weight: 400; color: var(--muted); }
+    .prev-w-icon { font-size: 36px; }
+    .prev-w-name { font-size: 13px; color: var(--t2); margin-top: 2px; }
+    .prev-action { background: var(--s2); border-radius: 8px; padding: 8px 12px; font-size: 12px; color: var(--accent); margin-top: 10px; }
+    .prev-forecast { display: none; flex-direction: column; gap: 2px; margin-top: 12px; border-top: 1px solid var(--border); padding-top: 12px; }
+    .prev-forecast.open { display: flex; }
+    .prev-fc-row { display: flex; gap: 10px; align-items: center; font-size: 12px; padding: 4px 0; border-bottom: 1px solid var(--border); }
+    .prev-fc-row:last-child { border-bottom: none; }
+    .prev-fc-day { width: 70px; color: var(--t2); }
+    .prev-fc-icon { width: 20px; }
+    .prev-fc-desc { flex: 1; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .prev-fc-temp { font-weight: 600; }
+    .forecast-toggle-row { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); cursor: pointer; margin-top: 10px; }
+    .prev-mkt-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .prev-mkt { background: var(--s2); border-radius: 8px; padding: 10px; }
+    .prev-mkt-sym { font-size: 10px; color: var(--muted); font-weight: 600; letter-spacing: .05em; }
+    .prev-mkt-price { font-size: 16px; font-weight: 800; margin-top: 2px; }
+    .prev-mkt-chg { font-size: 11px; font-weight: 600; margin-top: 2px; }
+    .up   { color: var(--green); }
+    .down { color: var(--red); }
+    .prev-news { display: flex; flex-direction: column; gap: 10px; }
+    .prev-news-item { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
+    .prev-news-item:hover .prev-news-title { color: var(--accent); }
+    .prev-news-num { font-size: 11px; color: var(--muted); font-weight: 700; width: 16px; flex-shrink: 0; padding-top: 1px; }
+    .prev-news-title { font-size: 13px; font-weight: 500; line-height: 1.4; transition: color var(--t); }
+    .prev-news-src { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    /* Done state */
+    .done-state { text-align: center; padding: 40px 0; }
+    .done-icon { font-size: 64px; margin-bottom: 20px; }
+    .done-state h2 { font-size: 28px; font-weight: 800; margin-bottom: 12px; }
+    .done-state p { font-size: 16px; color: var(--t2); margin-bottom: 28px; line-height: 1.6; }
+    .open-btn {
+      display: inline-block;
+      background: var(--accent);
+      color: #111;
+      font-weight: 700;
+      font-size: 17px;
+      padding: 16px 40px;
+      border-radius: 100px;
+      border: none;
+      cursor: pointer;
+      transition: filter var(--t);
+    }
+    .open-btn:hover { filter: brightness(1.08); }
+
+    /* Loading overlay */
+    .loading-overlay {
+      position: fixed; inset: 0; z-index: 999;
+      background: var(--bg);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+    .loading-overlay.show { display: flex; }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .stocks-addon { margin-top: 24px; border-top: 1px solid var(--border); padding-top: 16px; }
+    .stocks-addon-label { font-size: 13px; font-weight: 600; color: var(--t2); text-transform: uppercase; letter-spacing: .06em; }
+    .stocks-addon-hint { font-weight: 400; text-transform: none; color: var(--muted); }
+    .connect-socials-btn {
+      width: 100%; padding: 14px 18px; border-radius: 14px; margin-top: 16px;
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+      border: none; color: #fff; font-size: 15px; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; gap: 10px;
+      text-align: left; transition: opacity .15s;
+    }
+    .connect-socials-btn:hover { opacity: .88; }
+    .connect-socials-btn .cs-icon { font-size: 20px; flex-shrink: 0; }
+    .connect-socials-btn .cs-text { flex: 1; }
+    .connect-socials-btn .cs-sub { font-size: 12px; font-weight: 400; opacity: .75; display: block; margin-top: 1px; }
+    .connect-socials-btn .cs-badge { font-size: 10px; background: #1d9bf0; color: #fff; padding: 3px 8px; border-radius: 99px; letter-spacing: .04em; flex-shrink: 0; }
+    .go-deeper-row { display: none; }
+    .connect-x-btn { display: none; }
+    .coming-soon-tag { display: none; }
+    .acct-suggest-chip {
+      display: flex; flex-direction: column;
+      padding: 6px 12px; border-radius: 100px;
+      border: 1px solid var(--border); cursor: pointer;
+      transition: all var(--t); background: var(--s2);
+      font-size: 12px; line-height: 1.3;
+    }
+    .acct-suggest-chip:hover { border-color: var(--b2); }
+    .acct-suggest-chip.on { background: var(--accent); border-color: var(--accent); color: #111; }
+    .acct-suggest-name { font-weight: 700; }
+    .acct-suggest-desc { font-size: 10px; color: var(--muted); }
+    .acct-suggest-chip.on .acct-suggest-desc { color: rgba(0,0,0,.6); }
+    .loading-text { font-size: 15px; color: var(--t2); }
+    @media (max-width: 720px) {
+      .preview-grid { grid-template-columns: 1fr; }
+      .preview-shell { padding: 22px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Loading overlay -->
+<div class="loading-overlay" id="loading-overlay">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loading-text">Building your briefing…</div>
+</div>
+
+<!-- ── Landing page ── -->
+<div class="landing" id="landing">
+  <div class="logo-mark">📰</div>
+  <h1>The personalized morning paper<br>your town <em>stopped printing.</em></h1>
+  <p class="landing-sub">
+    Local news, weather, markets, your reps, high school sports — one clean daily read built around your ZIP code.
+  </p>
+
+  <div class="cta-row">
+    <button class="btn-primary" onclick="location.href='/quiz.html'">Find My Briefing Type →</button>
+    <button class="btn-ghost" onclick="startOnboarding()">Quick setup (no quiz)</button>
+  </div>
+  <div class="beta-note">60-second quiz · Free during beta</div>
+
+  <div class="social-proof-row">
+    <div class="proof-item">Built around your ZIP code</div>
+    <div class="proof-divider">·</div>
+    <div class="proof-item">No two briefings are alike</div>
+    <div class="proof-divider">·</div>
+    <div class="proof-item">One read, every morning</div>
+  </div>
+
+  <div class="what-you-get">
+    <div class="wg-label">Everything in your briefing</div>
+    <div class="wg-grid">
+      <div class="wg-item"><span class="wg-icon">🌤</span><span>Weather + alerts</span></div>
+      <div class="wg-item"><span class="wg-icon">📍</span><span>Local news</span></div>
+      <div class="wg-item"><span class="wg-icon">📈</span><span>Markets + your stocks</span></div>
+      <div class="wg-item"><span class="wg-icon">🏛</span><span>Your elected reps</span></div>
+      <div class="wg-item"><span class="wg-icon">🏅</span><span>HS sports scores</span></div>
+      <div class="wg-item"><span class="wg-icon">🗞</span><span>National headlines</span></div>
+      <div class="wg-item"><span class="wg-icon">💬</span><span>Community pulse</span></div>
+      <div class="wg-item"><span class="wg-icon">🕯</span><span>Obits + milestones</span></div>
+    </div>
+  </div>
+
+  <div class="trust-strip">Free · No spam · No download required · Works on any device</div>
+</div>
+
+<section class="preview-showcase">
+  <div class="preview-shell">
+    <div class="preview-kicker">Preview</div>
+    <div class="preview-headline">A morning briefing that looks like a front page, not a feed.</div>
+    <p class="preview-sub">Simple stand-in cards below. The live version swaps in your local weather, your stories, and your market watchlist.</p>
+    <div class="preview-grid">
+      <div class="preview-card weather">
+        <div class="preview-card-label">🌤 Weather</div>
+        <div class="preview-temp">46°</div>
+        <div class="preview-cond">Partly Cloudy</div>
+        <div class="preview-mini">
+          <div class="preview-mini-box"><span>High / Low</span><strong>52° / 34°</strong></div>
+          <div class="preview-mini-box"><span>Feels Like</span><strong>38°</strong></div>
+        </div>
+      </div>
+      <div class="preview-card news">
+        <div class="preview-card-label">📰 News</div>
+        <div class="preview-story">
+          <div class="preview-story-head">Local</div>
+          <div class="preview-story-title">City council approves downtown redevelopment after a late-night vote</div>
+          <div class="preview-story-meta">KELOLAND · 2h ago</div>
+        </div>
+        <div class="preview-story">
+          <div class="preview-story-head" style="color:#9b8ec4">National</div>
+          <div class="preview-story-title">Markets open higher as inflation cools and Treasury yields slip</div>
+          <div class="preview-story-meta">NPR · 45m ago</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Onboarding ── -->
+<div id="onboarding">
+  <div class="progress-wrap"><div class="progress-bar" id="progress-bar" style="width:33.3333%"></div></div>
+
+  <!-- Step 1: ZIP -->
+  <div class="step active" id="step-1">
+    <div class="step-eyebrow">Step 1 of 3</div>
+    <h2>Where are you?</h2>
+    <p class="step-hint">Your ZIP code powers local news, weather, politics, and high school sports.</p>
+    <input class="field" id="zip-input" type="tel" maxlength="5" placeholder="Enter your ZIP code" inputmode="numeric" />
+    <div class="field-confirm" id="zip-confirm"></div>
+
+    <!-- Additional locations -->
+    <div id="extra-zips-section" style="display:none;margin-top:16px">
+      <div style="font-size:13px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Also follow</div>
+      <div id="extra-zip-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+      <div style="display:flex;gap:8px">
+        <input id="extra-zip-input" type="tel" maxlength="5" inputmode="numeric" placeholder="Another ZIP code"
+          style="flex:1;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;background:var(--s2);color:var(--t1);font-size:14px"
+          onkeydown="if(event.key==='Enter')addExtraZip()" />
+        <button onclick="addExtraZip()" style="padding:10px 16px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer">Add</button>
+      </div>
+    </div>
+
+    <div id="add-location-link" style="display:none;margin-top:12px">
+      <span onclick="document.getElementById('extra-zips-section').style.display='block';document.getElementById('add-location-link').style.display='none';document.getElementById('extra-zip-input').focus()"
+        style="font-size:13px;color:var(--accent);cursor:pointer;font-weight:600">+ Add another location</span>
+    </div>
+
+    <div class="nav-row">
+      <button class="btn-next" id="zip-next" onclick="nextStep()" disabled>Continue →</button>
+    </div>
+  </div>
+
+  <!-- Step 2: Interests + Stocks + X handles -->
+  <div class="step" id="step-2">
+    <div class="step-eyebrow">Step 2 of 3</div>
+    <h2>What do you care about?</h2>
+    <p class="step-hint">Pick your topics. We'll surface relevant news every morning.</p>
+    <div class="chips" id="interests-chips"></div>
+
+    <div class="stocks-addon">
+      <div class="stocks-addon-label">Stocks to watch <span class="stocks-addon-hint">(space or comma to add)</span></div>
+      <input class="field" id="stocks-input" type="text" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" placeholder="e.g. AAPL TSLA NVDA BTC-USD" style="margin-top:6px" />
+    </div>
+
+    <div class="stocks-addon" id="voices-section" style="margin-top:20px">
+      <div class="stocks-addon-label">Voices to follow <span class="stocks-addon-hint">(optional)</span></div>
+      <p style="font-size:12px;color:var(--muted);margin:6px 0 10px">Based on your interests — tap to add, or connect your socials below.</p>
+      <div class="chips" id="suggested-account-chips"></div>
+      <div class="chips" id="twitter-chips" style="margin-top:8px"></div>
+      <div id="deeper-panel" style="display:none;margin-top:12px">
+        <input class="field" id="twitter-input" type="text" inputmode="url" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="@handle (space or enter to add)" style="margin-bottom:8px" />
+      </div>
+      <button class="connect-socials-btn" onclick="skipToConnectSocials()">
+        <span class="cs-icon">🔗</span>
+        <span class="cs-text">
+          Connect your socials
+          <span class="cs-sub">X timeline · Newsletters · Substack — added after setup</span>
+        </span>
+        <span class="cs-badge">After setup</span>
+      </button>
+    </div>
+
+    <div class="nav-row">
+      <button class="btn-back" onclick="prevStep()">←</button>
+      <button class="btn-next" onclick="nextStep()">Continue →</button>
+    </div>
+    <div class="skip-link" onclick="nextStep()">Skip — use defaults</div>
+  </div>
+
+  <!-- Step 3: Email -->
+  <div class="step" id="step-3">
+    <div class="step-eyebrow">Step 3 of 3</div>
+    <h2>Almost there</h2>
+    <p class="step-hint">Add your email to save your briefing across devices. Completely optional — skip and we'll still build it.</p>
+    <input class="field" id="email-input" type="text" inputmode="email" autocomplete="email" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="your@email.com" />
+    <div id="step3-error" style="color:#ef4444;font-size:13px;margin-top:8px;display:none"></div>
+    <div class="nav-row" style="margin-top:20px">
+      <button class="btn-back" onclick="prevStep()">←</button>
+      <button class="btn-next" id="finish-btn" onclick="finishSignup()">Build My Brief →</button>
+    </div>
+    <div class="skip-link" onclick="skipEmail()">Skip — no email needed</div>
+  </div>
+
+  <!-- Building screen — spinning newspaper -->
+  <div class="step" id="step-building" style="display:none;align-items:center;justify-content:center;min-height:80vh;flex-direction:column;gap:28px">
+    <div class="newspaper-stage">
+      <div class="newspaper-spin" id="newspaper">
+        <div class="np-head">MY DAILY BRIEFING</div>
+        <div class="np-rule"></div>
+        <div class="np-date" id="np-date"></div>
+        <div class="np-rule"></div>
+        <div class="np-headline" id="np-headline">LOCAL MAN STILL DOESN'T KNOW WHAT'S HAPPENING</div>
+        <div class="np-rule" style="margin-top:10px"></div>
+        <div class="np-cols">
+          <div class="np-col-block"></div>
+          <div class="np-col-block"></div>
+          <div class="np-col-block np-col-tall"></div>
+        </div>
+      </div>
+    </div>
+    <div style="text-align:center">
+      <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px">Building your briefing…</div>
+      <div style="font-size:12px;color:var(--muted)">Gathering local news, weather &amp; markets</div>
+    </div>
+    <div class="build-bar-wrap" style="width:240px"><div class="build-bar" id="build-bar"></div></div>
+  </div>
+</div>
+
+<script>
+const API = window.location.hostname === 'localhost' ? 'http://localhost:3001' : 'https://mydailybriefing-api-production.up.railway.app';
+
+const INTERESTS = [
+  { label: '💼 Finance', value: 'finance' },
+  { label: '📊 Markets', value: 'markets' },
+  { label: '🏛 Politics', value: 'politics' },
+  { label: '🤖 AI / Tech', value: 'technology' },
+  { label: '🌍 World News', value: 'world news' },
+  { label: '🏃 Health', value: 'health' },
+  { label: '🎬 Entertainment', value: 'entertainment' },
+  { label: '🎮 Gaming', value: 'gaming' },
+  { label: '🔬 Science', value: 'science' },
+  { label: '📈 Crypto', value: 'crypto' },
+  { label: '🏠 Real Estate', value: 'real estate' },
+  { label: '⚽ Sports', value: 'sports' },
+  { label: '🌱 Climate', value: 'climate' },
+  { label: '🎨 Culture', value: 'culture' },
+  { label: '🧠 Philosophy', value: 'philosophy' },
+  { label: '💰 Personal Finance', value: 'personal finance' },
+];
+
+const DEFAULT_STOCKS = ['SPY','QQQ','BTC-USD','AAPL'];
+
+// Curated X/Twitter voices by interest category
+const SUGGESTED_ACCOUNTS = {
+  'finance': [
+    { handle: 'morganhousel',   name: 'Morgan Housel',    desc: 'Psychology of Money' },
+    { handle: 'patrickoshag',   name: 'Patrick OShag',    desc: 'Invest Like the Best' },
+    { handle: 'elerianm',       name: 'Mohamed El-Erian', desc: 'Chief Economic Advisor' },
+    { handle: 'nickmaggiulli',  name: 'Nick Maggiulli',   desc: 'Of Dollars and Data' },
+    { handle: 'chamath',        name: 'Chamath',          desc: 'Social Capital' },
+  ],
+  'markets': [
+    { handle: 'unusual_whales', name: 'Unusual Whales',   desc: 'Options flow tracker' },
+    { handle: 'zerohedge',      name: 'ZeroHedge',        desc: 'Markets & macro' },
+    { handle: 'stockmktnerd',   name: 'Stock Mkt Nerd',   desc: 'Earnings deep dives' },
+    { handle: 'markets',        name: 'Bloomberg Markets',desc: 'Bloomberg news' },
+  ],
+  'technology': [
+    { handle: 'paulg',          name: 'Paul Graham',      desc: 'YC founder, essays' },
+    { handle: 'sama',           name: 'Sam Altman',       desc: 'OpenAI CEO' },
+    { handle: 'benedictevans',  name: 'Benedict Evans',   desc: 'Tech analyst' },
+    { handle: 'naval',          name: 'Naval',            desc: 'Tech & philosophy' },
+    { handle: 'karpathy',       name: 'Andrej Karpathy',  desc: 'AI researcher' },
+  ],
+  'politics': [
+    { handle: 'axios',          name: 'Axios',            desc: 'Political news' },
+    { handle: 'politico',       name: 'Politico',         desc: 'Politics & policy' },
+    { handle: 'nytpolitics',    name: 'NYT Politics',     desc: 'NY Times political' },
+    { handle: 'jonlemire',      name: 'Jonathan Lemire',  desc: 'POLITICO reporter' },
+  ],
+  'sports': [
+    { handle: 'wojespn',        name: 'Woj',              desc: 'NBA insider' },
+    { handle: 'shamscharania',  name: 'Shams',            desc: 'NBA reporter' },
+    { handle: 'adamschefter',   name: 'Schefter',         desc: 'NFL insider' },
+    { handle: 'rapsheet',       name: 'Ian Rapoport',     desc: 'NFL Network' },
+    { handle: 'ken_rosenthal',  name: 'Ken Rosenthal',    desc: 'MLB reporter' },
+  ],
+  'crypto': [
+    { handle: 'saylor',         name: 'Michael Saylor',   desc: 'Bitcoin evangelist' },
+    { handle: 'aantonop',       name: 'Andreas M.',       desc: 'Bitcoin educator' },
+    { handle: 'naval',          name: 'Naval',            desc: 'Crypto & startups' },
+    { handle: 'punk6529',       name: 'punk6529',         desc: 'NFT & crypto' },
+  ],
+  'philosophy': [
+    { handle: 'dailystoic',     name: 'Daily Stoic',      desc: 'Stoic philosophy' },
+    { handle: 'naval',          name: 'Naval',            desc: 'Life & wisdom' },
+    { handle: 'jordanbpeterson',name: 'Jordan Peterson',  desc: 'Psychology & meaning' },
+    { handle: 'ryanholiday',    name: 'Ryan Holiday',     desc: 'Stoicism & books' },
+  ],
+  'personal finance': [
+    { handle: 'ramit',          name: 'Ramit Sethi',      desc: 'I Will Teach You Rich' },
+    { handle: 'morganhousel',   name: 'Morgan Housel',    desc: 'Psychology of Money' },
+    { handle: 'jlcollinsnh',    name: 'JL Collins',       desc: 'Simple Path to Wealth' },
+  ],
+  'health': [
+    { handle: 'peterattiamd',   name: 'Peter Attia',      desc: 'Longevity & medicine' },
+    { handle: 'hubermanlab',    name: 'Andrew Huberman',  desc: 'Neuroscience & health' },
+    { handle: 'foundmyfitness', name: 'Rhonda Patrick',   desc: 'Nutrition science' },
+  ],
+  'science': [
+    { handle: 'neiltyson',      name: 'Neil deGrasse Tyson', desc: 'Astrophysics' },
+    { handle: 'elonmusk',       name: 'Elon Musk',        desc: 'SpaceX & Tesla' },
+    { handle: 'pbsmediashift',  name: 'PBS Space Time',   desc: 'Physics & cosmology' },
+  ],
+  'climate': [
+    { handle: 'ericnstewart',   name: 'Eric Holthaus',    desc: 'Climate journalist' },
+    { handle: 'katharine_hh',   name: 'Katharine Hayhoe', desc: 'Climate scientist' },
+  ],
+  'real estate': [
+    { handle: 'nickgerli',      name: 'Nick Gerli',       desc: 'Housing market analyst' },
+    { handle: 'calculated_risk',name: 'Calculated Risk',  desc: 'Housing data' },
+  ],
+  'entertainment': [
+    { handle: 'variety',        name: 'Variety',          desc: 'Entertainment news' },
+    { handle: 'thr',            name: 'Hollywood Reporter',desc: 'Industry news' },
+  ],
+  'world news': [
+    { handle: 'bbc_world_news', name: 'BBC World',        desc: 'Global news' },
+    { handle: 'reuters',        name: 'Reuters',          desc: 'Wire service' },
+    { handle: 'nprnews',        name: 'NPR News',         desc: 'Public radio news' },
+  ],
+};
+
+let step = 1;
+const totalSteps = 3;
+let state = {
+  zip: '', city: '', stateCode: '', lat: null, lng: null,
+  email: '', interests: [], sports_teams: [], hs_teams: [],
+  stocks: [...DEFAULT_STOCKS], twitter_handles: [], token: '',
+  extra_zips: [],  // additional locations
+};
+
+// ── Init ──
+document.addEventListener('DOMContentLoaded', () => {
+  buildInterestChips();
+  setupZipInput();
+  setupStocksInput();
+  setupTwitterInput();
+  buildSuggestedAccountChips();
+
+  // Check existing token
+  const tok = localStorage.getItem('briefing_token');
+  if (tok) {
+    document.getElementById('landing').style.display = 'none';
+    location.href = 'briefing.html?token=' + tok;
+    return;
+  }
+
+  // Pre-fill from quiz if coming from quiz.html
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('from') === 'quiz') {
+    const quizInterests = params.get('interests');
+    if (quizInterests) {
+      // Pre-select chips matching quiz interests
+      const interestList = quizInterests.split(',').map(i => i.trim().toLowerCase());
+      document.querySelectorAll('#interests-chips .chip').forEach(chip => {
+        const val = (chip.dataset.value || chip.textContent || '').toLowerCase();
+        if (interestList.some(i => val.includes(i) || i.includes(val))) {
+          chip.classList.add('selected');
+          chip.setAttribute('aria-pressed', 'true');
+        }
+      });
+    }
+    // Jump straight to onboarding (skip landing)
+    startOnboarding();
+  }
+});
+
+// ── Landing actions ──
+function startOnboarding() {
+  document.getElementById('landing').style.display = 'none';
+  document.getElementById('onboarding').style.display = 'block';
+}
+function tryDemo() {
+  location.href = 'briefing.html?token=1aac8456-582b-4fd0-87c7-d0ce1d8c59e1';
+}
+
+// ── Step navigation ──
+function updateProgress() {
+  const pct = (step / totalSteps) * 100;
+  document.getElementById('progress-bar').style.width = pct + '%';
+}
+function showStep(n) {
+  document.querySelectorAll('.step').forEach(s => {
+    s.classList.remove('active');
+    s.style.display = 'none';
+  });
+  const key = (n === 'building') ? 'step-building' : 'step-' + n;
+  const el = document.getElementById(key);
+  if (el) {
+    el.classList.add('active');
+    el.style.display = (n === 'building') ? 'flex' : 'block';
+  }
+}
+async function nextStep() {
+  // On step 2 → 3: collect interests/stocks and kick off prefetch
+  if (step === 2) {
+    collectStep2State();
+    // If user already has a token (returning), skip straight to building
+    if (state.token) { finishSignup(); return; }
+    // Pre-warm: store partial state so email step can be quick
+    window._prefetchReady = false;
+  }
+  if (step < totalSteps) { step++; showStep(step); updateProgress(); }
+}
+
+function collectStep2State() {
+  const stocksVal = document.getElementById('stocks-input')?.value.trim().toUpperCase();
+  if (stocksVal) {
+    stocksVal.split(/[\s,]+/).map(s => s.replace(/[^A-Z0-9\-]/g,'')).filter(Boolean)
+      .forEach(s => { if (!state.stocks.includes(s)) state.stocks.push(s); });
+  }
+  const twitterVal = document.getElementById('twitter-input')?.value.trim();
+  if (twitterVal) {
+    twitterVal.split(/[\s,@]+/).map(h => h.replace(/[^A-Za-z0-9_]/g,'')).filter(Boolean)
+      .forEach(h => { if (!state.twitter_handles.includes(h)) state.twitter_handles.push(h); });
+  }
+}
+function prevStep() {
+  if (step > 1) { step--; showStep(step); updateProgress(); }
+}
+function skipEmail() {
+  state.email = '';
+  finishSignup();
+}
+
+const FAKE_HEADLINES = [
+  "LOCAL MAN STILL DOESN'T KNOW WHAT'S HAPPENING",
+  "WEATHER CONTINUES TO OCCUR OUTSIDE, SOURCES CONFIRM",
+  "STOCKS DO THING AGAIN — EXPERTS DIVIDED",
+  "AREA SPORTS TEAM PLAYS GAME IN SHOCKING DEVELOPMENT",
+  "POLITICIANS POLITIC IN UNPRECEDENTED TWIST",
+  "COFFEE PRICES STILL TOO HIGH, MORNING READERS SAY",
+  "BRIEFING TAKES SLIGHTLY TOO LONG, READER GROWS BEARD",
+  "LOCAL ALGORITHM CLAIMS TO KNOW WHAT YOU CARE ABOUT",
+  "MORNING PAPER SHORTAGE BLAMED ON THERE BEING NO MORNING PAPER",
+  "NATION AGREES THINGS ARE A LOT RIGHT NOW",
+  "MAN READS NEWS, FORMS OPINION, TELLS NOBODY",
+  "ECONOMY DOES ECONOMY THINGS FOR ANOTHER CONSECUTIVE DAY",
+];
+
+function animateBuildBar() {
+  // Progress bar
+  const bar = document.getElementById('build-bar');
+  if (bar) {
+    let pct = 0;
+    const tick = setInterval(() => {
+      pct = Math.min(pct + (Math.random() * 7 + 3), 92);
+      bar.style.width = pct + '%';
+      if (pct >= 92) clearInterval(tick);
+    }, 350);
+  }
+
+  // Set newspaper date
+  const dateEl = document.getElementById('np-date');
+  if (dateEl) {
+    const d = new Date();
+    dateEl.textContent = d.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' }).toUpperCase();
+  }
+
+  // Cycle headlines
+  const headEl = document.getElementById('np-headline');
+  if (!headEl) return;
+  let idx = 0;
+  const cycleHeadline = () => {
+    headEl.style.opacity = '0';
+    setTimeout(() => {
+      idx = (idx + 1) % FAKE_HEADLINES.length;
+      headEl.textContent = FAKE_HEADLINES[idx];
+      headEl.style.opacity = '1';
+    }, 300);
+  };
+  setInterval(cycleHeadline, 6000);
+}
+
+function showStep3Error(msg) {
+  const el = document.getElementById('step3-error');
+  if (el) { el.textContent = msg; el.style.display = 'block'; }
+  document.getElementById('finish-btn')?.removeAttribute('disabled');
+}
+
+async function finishSignup() {
+  // Collect any remaining stocks from the input field
+  const stocksVal = document.getElementById('stocks-input')?.value.trim().toUpperCase();
+  if (stocksVal) {
+    stocksVal.split(/[\s,]+/).map(s => s.replace(/[^A-Z0-9\-]/g,'')).filter(Boolean)
+      .forEach(s => { if (!state.stocks.includes(s)) state.stocks.push(s); });
+  }
+
+  // Collect X/Twitter handles
+  const twitterVal = document.getElementById('twitter-input')?.value.trim();
+  if (twitterVal) {
+    twitterVal.split(/[\s,@]+/).map(h => h.replace(/[^A-Za-z0-9_]/g,'')).filter(Boolean)
+      .forEach(h => { if (!state.twitter_handles.includes(h)) state.twitter_handles.push(h); });
+  }
+
+  // Get email
+  const emailVal = document.getElementById('email-input')?.value.trim();
+  if (emailVal) state.email = emailVal;
+
+  // Disable button + clear old errors
+  const btn = document.getElementById('finish-btn');
+  if (btn) btn.setAttribute('disabled', 'disabled');
+  const errEl = document.getElementById('step3-error');
+  if (errEl) errEl.style.display = 'none';
+
+  // Show building screen (replaces loading overlay — no z-index cover issues)
+  showStep('building');
+  const buildStart = Date.now();
+  animateBuildBar();
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+  try {
+    const existingToken = localStorage.getItem('briefing_token');
+
+    if (existingToken) {
+      // Returning user — just update profile
+      state.token = existingToken;
+      await fetch(`${API}/api/users/${existingToken}/profile`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({
+          interests: state.interests,
+          stocks: state.stocks,
+          twitter_handles: state.twitter_handles,
+          sports_teams: [],
+          hs_teams: [],
+        }),
+      });
+    } else {
+      // New user — sign up
+      state.email = state.email || `anon_${Date.now()}@briefing.local`;
+      const res = await fetch(`${API}/api/users/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({
+          email: state.email,
+          zip_code: state.zip,
+          interests: state.interests,
+          sports_teams: [],
+          hs_teams: [],
+          stocks: state.stocks,
+          twitter_handles: state.twitter_handles,
+          saved_locations: state.extra_zips.map(z => ({ zip: z })),
+        }),
+      });
+      const data = await res.json();
+      // 409 = email already exists, server returns existing token — still good
+      if (data.token) {
+        state.token = data.token;
+        localStorage.setItem('briefing_token', data.token);
+      } else {
+        throw new Error(data.error || 'Signup failed');
+      }
+    }
+
+    clearTimeout(timeoutId);
+    // Enforce minimum 20s on the newspaper screen so people get 3 full headline cycles
+    const elapsed = Date.now() - buildStart;
+    const minDisplay = 20000;
+    const remaining = Math.max(0, minDisplay - elapsed);
+    setTimeout(() => {
+      location.href = `briefing.html?token=${encodeURIComponent(state.token)}`;
+    }, remaining);
+
+  } catch (e) {
+    clearTimeout(timeoutId);
+    showStep(3);
+    if (btn) btn.removeAttribute('disabled');
+    const msg = e.name === 'AbortError' ? 'Request timed out — check your connection and try again.' : (e.message || 'Something went wrong. Try again.');
+    showStep3Error(msg);
+  }
+}
+
+// ── ZIP ──
+function setupZipInput() {
+  const inp = document.getElementById('zip-input');
+  inp.addEventListener('input', () => {
+    const val = inp.value.replace(/\D/g,'').slice(0,5);
+    inp.value = val;
+    if (val.length === 5) validateZip(val);
+    else { document.getElementById('zip-confirm').textContent = ''; document.getElementById('zip-next').disabled = true; }
+  });
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !document.getElementById('zip-next').disabled) nextStep(); });
+}
+async function validateZip(zip) {
+  const el = document.getElementById('zip-confirm');
+  el.textContent = 'Checking…';
+  el.className = 'field-confirm';
+  try {
+    const res = await fetch(`${API}/api/geo/zip/${zip}`);
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    state.zip = zip; state.city = data.city; state.stateCode = data.state;
+    state.lat = data.lat; state.lng = data.lng;
+    el.textContent = `✓ ${data.city}, ${data.state}`;
+    el.className = 'field-confirm';
+    document.getElementById('zip-next').disabled = false;
+    // Show "add another location" option
+    document.getElementById('add-location-link').style.display = 'block';
+    // Auto-advance after short delay — no click needed
+    setTimeout(() => nextStep(), 900);
+  } catch {
+    el.textContent = 'ZIP not found — try another';
+    el.className = 'field-error';
+    document.getElementById('zip-next').disabled = true;
+  }
+}
+
+// ── Extra ZIPs ──
+async function addExtraZip() {
+  const inp = document.getElementById('extra-zip-input');
+  const zip = (inp?.value || '').replace(/\D/g,'').slice(0,5);
+  if (zip.length !== 5 || zip === state.zip || state.extra_zips.includes(zip)) {
+    inp.value = ''; return;
+  }
+  inp.value = 'Checking…';
+  try {
+    const res = await fetch(`${API}/api/geo/zip/${zip}`);
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    state.extra_zips.push(zip);
+    inp.value = '';
+    const chips = document.getElementById('extra-zip-chips');
+    const chip = document.createElement('div');
+    chip.style.cssText = 'display:flex;align-items:center;gap:5px;padding:5px 10px;background:var(--accent);color:#fff;border-radius:99px;font-size:13px;font-weight:600';
+    chip.innerHTML = `${data.city}, ${data.state} <span onclick="removeExtraZip('${zip}',this.parentElement)" style="cursor:pointer;opacity:.7;font-size:16px;line-height:1">×</span>`;
+    chips.appendChild(chip);
+  } catch {
+    inp.value = '';
+    inp.placeholder = 'ZIP not found';
+    setTimeout(() => inp.placeholder = 'Another ZIP code', 2000);
+  }
+}
+
+function removeExtraZip(zip, el) {
+  state.extra_zips = state.extra_zips.filter(z => z !== zip);
+  el?.remove();
+}
+
+// ── Interests ──
+const DEFAULT_INTERESTS = ['local news', 'weather'];
+function buildSuggestedAccountChips() {
+  const wrap = document.getElementById('suggested-account-chips');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+
+  // Gather unique suggestions based on selected interests
+  const seen = new Set();
+  const suggestions = [];
+  const activeInterests = state.interests.length ? state.interests : ['finance', 'markets', 'world news'];
+  activeInterests.forEach(interest => {
+    (SUGGESTED_ACCOUNTS[interest] || []).forEach(acct => {
+      if (!seen.has(acct.handle)) {
+        seen.add(acct.handle);
+        suggestions.push(acct);
+      }
+    });
+  });
+
+  if (!suggestions.length) {
+    document.getElementById('voices-section').style.display = 'none';
+    return;
+  }
+  document.getElementById('voices-section').style.display = 'block';
+
+  suggestions.slice(0, 8).forEach(acct => {
+    const chip = document.createElement('div');
+    const isOn = state.twitter_handles.includes(acct.handle);
+    chip.className = 'chip acct-suggest-chip' + (isOn ? ' on' : '');
+    chip.innerHTML = `<span class="acct-suggest-name">@${acct.handle}</span><span class="acct-suggest-desc">${acct.desc}</span>`;
+    chip.onclick = () => {
+      chip.classList.toggle('on');
+      if (chip.classList.contains('on')) {
+        if (!state.twitter_handles.includes(acct.handle)) state.twitter_handles.push(acct.handle);
+      } else {
+        state.twitter_handles = state.twitter_handles.filter(h => h !== acct.handle);
+      }
+    };
+    wrap.appendChild(chip);
+  });
+}
+
+function toggleDeeperMode() {
+  const panel = document.getElementById('deeper-panel');
+  if (!panel) return;
+  const open = panel.style.display === 'none';
+  panel.style.display = open ? 'block' : 'none';
+  if (open) document.getElementById('twitter-input')?.focus();
+}
+
+function skipToConnectSocials() {
+  // Continue to signup, we'll surface Connect Accounts panel post-briefing
+  nextStep();
+}
+
+function buildInterestChips() {
+  const wrap = document.getElementById('interests-chips');
+  INTERESTS.forEach(({ label, value }) => {
+    const chip = document.createElement('div');
+    const isDefault = DEFAULT_INTERESTS.includes(value);
+    chip.className = isDefault ? 'chip on' : 'chip';
+    chip.textContent = label;
+    if (isDefault && !state.interests.includes(value)) state.interests.push(value);
+    chip.onclick = () => {
+      chip.classList.toggle('on');
+      if (chip.classList.contains('on')) { if (!state.interests.includes(value)) state.interests.push(value); }
+      else state.interests = state.interests.filter(v => v !== value);
+      // Refresh suggested voices whenever interests change
+      buildSuggestedAccountChips();
+    };
+    wrap.appendChild(chip);
+  });
+}
+
+function setupStocksInput() {
+  const inp = document.getElementById('stocks-input');
+  const commitStocks = () => {
+    inp.value
+      .toUpperCase()
+      .split(/[\s,]+/)
+      .map(s => s.trim().replace(/[^A-Z0-9\-]/g,''))
+      .filter(Boolean)
+      .forEach(sym => {
+        if (!state.stocks.includes(sym)) state.stocks.push(sym);
+      });
+    inp.value = '';
+  };
+  inp.addEventListener('keydown', e => {
+    if (e.key === ' ' || e.key === ',' || e.key === 'Enter') {
+      e.preventDefault();
+      commitStocks();
+    }
+  });
+  inp.addEventListener('blur', commitStocks);
+}
+
+function setupTwitterInput() {
+  const inp = document.getElementById('twitter-input');
+  if (!inp) return;
+  const chipsWrap = document.getElementById('twitter-chips');
+
+  const addHandle = (raw) => {
+    const handle = raw.replace(/^@/, '').replace(/[^A-Za-z0-9_]/g, '').trim();
+    if (!handle || state.twitter_handles.includes(handle)) return;
+    state.twitter_handles.push(handle);
+    renderTwitterChips();
+  };
+
+  const renderTwitterChips = () => {
+    chipsWrap.innerHTML = '';
+    state.twitter_handles.forEach(h => {
+      const chip = document.createElement('div');
+      chip.className = 'chip on';
+      chip.innerHTML = `@${h} <span style="margin-left:4px;opacity:.6">×</span>`;
+      chip.onclick = () => {
+        state.twitter_handles = state.twitter_handles.filter(x => x !== h);
+        renderTwitterChips();
+      };
+      chipsWrap.appendChild(chip);
+    });
+  };
+
+  inp.addEventListener('keydown', e => {
+    if (e.key === ' ' || e.key === ',' || e.key === 'Enter') {
+      e.preventDefault();
+      addHandle(inp.value.trim());
+      inp.value = '';
+    }
+  });
+  inp.addEventListener('blur', () => {
+    if (inp.value.trim()) { addHandle(inp.value.trim()); inp.value = ''; }
+  });
+}
+
+function wIcon(f) {
+  const s = (f||'').toLowerCase();
+  if (s.includes('snow') || s.includes('sleet'))   return '❄️';
+  if (s.includes('thunder') || s.includes('storm')) return '⛈️';
+  if (s.includes('rain') || s.includes('shower'))   return '🌧️';
+  if (s.includes('fog'))                             return '🌫️';
+  if (s.includes('overcast'))                        return '☁️';
+  if (s.includes('cloud'))                           return '⛅';
+  if (s.includes('wind'))                            return '💨';
+  if (s.includes('clear') || s.includes('sunny'))    return '☀️';
+  return '🌤️';
+}
+
+async function finish() { await finishSignup(); }
+function openBriefing() {
+  const token = state.token || localStorage.getItem('briefing_token');
+  location.href = token ? `briefing.html?token=${encodeURIComponent(token)}` : 'briefing.html';
+}
+</script>
+</body>
+</html>

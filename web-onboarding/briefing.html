@@ -2284,5 +2284,34 @@ function initReadTracking() {
 
 init();
 </script>
+
+<!-- ── Referral widget ───────────────────────────────────────────────────── -->
+<script>
+/**
+ * Inline referral widget bootstrap.
+ * Loads referral-widget.js (which handles its own DOM insertion).
+ * Also handles the case where a ?ref= code arrives from an invite link.
+ */
+(function () {
+  // Inject the external widget script so it can be cached separately
+  var s = document.createElement('script');
+  s.src = '/referral-widget.js';
+  s.defer = true;
+  document.head.appendChild(s);
+
+  // If signup just completed and there is a pending ref code, apply it
+  // once the briefing_token is available in localStorage.
+  var _pendingRefCheck = setInterval(function () {
+    var token = localStorage.getItem('briefing_token');
+    var code  = sessionStorage.getItem('pending_ref_code');
+    if (token && code && window.referralWidget) {
+      clearInterval(_pendingRefCheck);
+      window.referralWidget.applyPendingRefCode(token);
+    }
+  }, 500);
+  // Stop polling after 30 s to avoid running forever
+  setTimeout(function () { clearInterval(_pendingRefCheck); }, 30000);
+})();
+</script>
 </body>
 </html>

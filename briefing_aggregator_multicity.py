@@ -12,7 +12,21 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 import subprocess
 import os
+import signal
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+
+def _parse_feed_with_timeout(url, timeout=8):
+    """Parse RSS feed with a timeout to prevent stalling."""
+    try:
+        # Use requests with timeout first, then parse the content
+        resp = requests.get(url, timeout=timeout, headers={'User-Agent': 'Mozilla/5.0'})
+        resp.raise_for_status()
+        return feedparser.parse(resp.content)
+    except Exception as e:
+        print(f"   ⚠️  Feed timeout/error ({url[:50]}...): {e}")
+        return feedparser.FeedParserDict(entries=[])
 
 # Paths
 SCRIPT_DIR = Path(__file__).parent
@@ -238,7 +252,7 @@ def get_local_news(city_id: str, limit: int = 5) -> List[Dict]:
         
         for feed_url in rss_feeds:
             try:
-                feed = feedparser.parse(feed_url)
+                feed = _parse_feed_with_timeout(feed_url, timeout=8)
                 
                 for entry in feed.entries[:3]:  # Top 3 from each feed
                     # Calculate time ago

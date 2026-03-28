@@ -11,37 +11,43 @@ const PROXY_URL = 'http://localhost:3456/v1';
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1';
 
 async function callClaude(prompt) {
-  // Try claude-max proxy first (free via subscription)
-  for (const [url, auth] of [
-    [PROXY_URL + '/messages', 'proxy'],
-    [ANTHROPIC_URL + '/messages', 'anthropic'],
-  ]) {
-    try {
-      const apiKey = auth === 'proxy' ? 'not-needed' : (process.env.ANTHROPIC_API_KEY || '');
-      if (auth === 'anthropic' && !apiKey) continue;
+  // Try claude-max proxy first (OpenAI-compat, free via subscription)
+  try {
+    const resp = await fetch(PROXY_URL + '/chat/completions', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'authorization': 'Bearer not-needed' },
+      body: JSON.stringify({
+        model: 'claude-haiku-4',
+        max_tokens: 300,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      return data.choices?.[0]?.message?.content?.trim() || null;
+    }
+  } catch (_) {}
 
-      const resp = await fetch(url, {
+  // Fallback: Anthropic API directly
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (apiKey) {
+    try {
+      const resp = await fetch(ANTHROPIC_URL + '/messages', {
         method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-        },
+        headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
         body: JSON.stringify({
           model: 'claude-haiku-4-5-20251001',
           max_tokens: 300,
           messages: [{ role: 'user', content: prompt }],
         }),
-        timeout: 8000,
       });
       if (resp.ok) {
         const data = await resp.json();
         return data.content?.[0]?.text?.trim() || null;
       }
-    } catch (_) {
-      continue;
-    }
+    } catch (_) {}
   }
+
   return null;
 }
 

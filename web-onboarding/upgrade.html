@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0d0d0d">
+  <meta name="description" content="Upgrade to My Daily Briefing Pro — $9/month. Real X timeline, newsletters, email digest, and more.">
+  <title>Upgrade to Pro — My Daily Briefing</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #0d0d0d;
+      --surface: #141414;
+      --s2:      #1a1a1a;
+      --border:  #222222;
+      --b2:      #2c2c2c;
+      --accent:  #f0c040;
+      --green:   #4db86a;
+      --blue:    #4a9eff;
+      --red:     #e05050;
+      --text:    #f0f0f0;
+      --t2:      #a8a8a8;
+      --muted:   #5a5a5a;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+      font-size: 15px;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 36px 28px;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+    }
+
+    /* ── Header ── */
+    .logo { font-size: 44px; margin-bottom: 12px; }
+
+    h1 {
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 8px;
+      letter-spacing: -0.5px;
+    }
+
+    .subtitle {
+      color: var(--t2);
+      font-size: 14px;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    /* ── Price box ── */
+    .price-box {
+      background: var(--s2);
+      border: 1px solid var(--b2);
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+
+    .price {
+      font-size: 46px;
+      font-weight: 800;
+      color: var(--accent);
+      line-height: 1.1;
+    }
+
+    .price span {
+      font-size: 18px;
+      font-weight: 400;
+      color: var(--t2);
+    }
+
+    .price-note {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    /* ── Feature list ── */
+    .features {
+      text-align: left;
+      margin-bottom: 28px;
+    }
+
+    .feature {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+      color: var(--t2);
+    }
+
+    .feature:last-child { border-bottom: none; }
+
+    .feature-icon {
+      flex-shrink: 0;
+      font-size: 15px;
+      margin-top: 1px;
+    }
+
+    .feature-text strong {
+      display: block;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 1px;
+    }
+
+    .feature-text small {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    /* ── CTA button ── */
+    .cta-btn {
+      width: 100%;
+      padding: 15px;
+      background: var(--accent);
+      color: #111;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-bottom: 10px;
+      transition: opacity 0.15s, transform 0.1s;
+      letter-spacing: 0.1px;
+    }
+
+    .cta-btn:hover  { opacity: 0.9; transform: translateY(-1px); }
+    .cta-btn:active { opacity: 1;   transform: translateY(0); }
+    .cta-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .trial-note {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 18px;
+    }
+
+    /* ── Back link ── */
+    .back-link {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 13px;
+      cursor: pointer;
+      padding: 4px 0;
+      transition: color 0.15s;
+    }
+
+    .back-link:hover { color: var(--t2); }
+
+    /* ── Status banners ── */
+    .banner {
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 14px;
+      margin-bottom: 20px;
+      display: none;
+      text-align: left;
+    }
+
+    .banner-success {
+      background: rgba(77, 184, 106, 0.12);
+      border: 1px solid rgba(77, 184, 106, 0.3);
+      color: #4db86a;
+    }
+
+    .banner-error {
+      background: rgba(224, 80, 80, 0.1);
+      border: 1px solid rgba(224, 80, 80, 0.25);
+      color: #e05050;
+    }
+
+    .banner-info {
+      background: rgba(74, 158, 255, 0.1);
+      border: 1px solid rgba(74, 158, 255, 0.25);
+      color: var(--blue);
+    }
+
+    /* ── Spinner inside button ── */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(0,0,0,0.25);
+      border-top-color: #000;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <div class="logo">⭐</div>
+  <h1>Upgrade to Pro</h1>
+  <p class="subtitle">Everything you care about in one place — so you never have to open another app in the morning.</p>
+
+  <!-- Already-pro notice -->
+  <div id="banner-pro" class="banner banner-info">
+    You're already on Pro! <a id="back-to-briefing" href="#" style="color:var(--blue);font-weight:600;margin-left:4px">Back to your briefing &rarr;</a>
+  </div>
+
+  <!-- Success redirect notice -->
+  <div id="banner-success" class="banner banner-success">
+    Welcome to Pro! Redirecting to your briefing&hellip;
+  </div>
+
+  <!-- Error notice -->
+  <div id="banner-error" class="banner banner-error"></div>
+
+  <!-- Price -->
+  <div class="price-box">
+    <div class="price">$9<span>/mo</span></div>
+    <div class="price-note">Cancel anytime &mdash; no contracts</div>
+  </div>
+
+  <!-- Feature list -->
+  <div class="features">
+    <div class="feature">
+      <span class="feature-icon">&#10003;</span>
+      <div class="feature-text">
+        <strong>Real X timeline</strong>
+        <small>Posts from people you actually follow</small>
+      </div>
+    </div>
+    <div class="feature">
+      <span class="feature-icon">&#10003;</span>
+      <div class="feature-text">
+        <strong>Newsletter inbox</strong>
+        <small>Substack, RSS, any feed in one place</small>
+      </div>
+    </div>
+    <div class="feature">
+      <span class="feature-icon">&#10003;</span>
+      <div class="feature-text">
+        <strong>Daily email digest</strong>
+        <small>Your briefing delivered every morning</small>
+      </div>
+    </div>
+    <div class="feature">
+      <span class="feature-icon">&#10003;</span>
+      <div class="feature-text">
+        <strong>Unlimited locations</strong>
+        <small>Home, work, anywhere you care about</small>
+      </div>
+    </div>
+    <div class="feature">
+      <span class="feature-icon">&#10003;</span>
+      <div class="feature-text">
+        <strong>Priority refresh</strong>
+        <small>On-demand, always fresh — never cached</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <button id="upgrade-btn" class="cta-btn" onclick="startCheckout()">
+    Upgrade to Pro &mdash; $9/month
+  </button>
+  <div class="trial-note">Secure checkout powered by Stripe</div>
+  <button class="back-link" onclick="goBack()">&#8592; Back to my briefing</button>
+</div>
+
+<script>
+  // ── Config ────────────────────────────────────────────────────────────────
+  const API = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:3001'
+    : 'https://mydailybriefing-api-production.up.railway.app';
+
+  // Pull token from URL param first, then localStorage
+  const params = new URLSearchParams(window.location.search);
+  const token  = params.get('token') || localStorage.getItem('briefing_token');
+
+  // Persist token so briefing.html can read it
+  if (token) localStorage.setItem('briefing_token', token);
+
+  // ── Banner helpers ────────────────────────────────────────────────────────
+  function showBanner(id, msg) {
+    const el = document.getElementById(id);
+    if (msg) el.innerHTML = msg;
+    el.style.display = 'block';
+  }
+
+  function showError(msg) {
+    showBanner('banner-error', msg);
+  }
+
+  // ── Handle success / cancel redirect from Stripe ──────────────────────────
+  (function handleReturnParams() {
+    const upgraded  = params.get('upgraded')  === '1';
+    const cancelled = params.get('cancelled') === '1';
+
+    if (upgraded) {
+      showBanner('banner-success', null);          // message already in HTML
+      document.getElementById('upgrade-btn').disabled = true;
+      setTimeout(() => {
+        window.location.href = token
+          ? `briefing.html?token=${token}`
+          : 'index.html';
+      }, 2500);
+      return;
+    }
+
+    if (cancelled) {
+      showError('Checkout was cancelled — no charge was made. You can try again whenever you\'re ready.');
+    }
+  })();
+
+  // ── Check existing Pro status ─────────────────────────────────────────────
+  async function checkStatus() {
+    if (!token) return;
+    try {
+      const r = await fetch(`${API}/api/users/${token}/subscription`);
+      if (!r.ok) return;
+      const sub = await r.json();
+      if (sub.isPro && !sub.isTrial) {
+        // Already paying Pro — show notice and disable button
+        document.getElementById('back-to-briefing').href =
+          `briefing.html?token=${token}`;
+        showBanner('banner-pro', null);
+        document.getElementById('upgrade-btn').disabled = true;
+      }
+    } catch (_) { /* silently ignore — best-effort */ }
+  }
+
+  // ── Checkout ──────────────────────────────────────────────────────────────
+  async function startCheckout() {
+    if (!token) {
+      showError('No account token found. Please go back to your briefing and try again.');
+      return;
+    }
+
+    const btn = document.getElementById('upgrade-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Redirecting to checkout&hellip;';
+
+    try {
+      const r = await fetch(`${API}/api/checkout`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ token }),
+      });
+      const data = await r.json();
+
+      if (data.url) {
+        // Redirect to Stripe-hosted checkout
+        window.location.href = data.url;
+      } else {
+        throw new Error(data.error || 'Checkout unavailable — please try again later.');
+      }
+    } catch (e) {
+      showError(e.message);
+      btn.disabled = false;
+      btn.textContent = 'Upgrade to Pro \u2014 $9/month';
+    }
+  }
+
+  // ── Back navigation ───────────────────────────────────────────────────────
+  function goBack() {
+    if (token) {
+      window.location.href = `briefing.html?token=${token}`;
+    } else {
+      window.history.back();
+    }
+  }
+
+  // Run status check on load
+  checkStatus();
+</script>
+</body>
+</html>

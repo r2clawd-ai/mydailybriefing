@@ -65,11 +65,14 @@ function fixUrl(url) {
 }
 
 function normalizeItem(item) {
+  const url = fixUrl(item.link || item.guid || item.url || '');
   return {
     title:       item.title       || '',
-    link:        fixUrl(item.link || item.guid || ''),
+    url,
+    link:        url,   // keep for backward compat
     source:      item.source?.['#text'] || item.source || item['dc:creator'] || '',
-    published:   item.pubDate     || item['dc:date'] || '',
+    pubDate:     item.pubDate     || item['dc:date'] || item.published || '',
+    published:   item.pubDate     || item['dc:date'] || item.published || '',
     description: item.description ? stripHTML(item.description).slice(0, 200) : '',
   };
 }
@@ -310,12 +313,17 @@ async function getNationalNews() {
  * Deduplicates across teams, top 2 per team, max 10 total.
  */
 async function getSportsNews(teams = []) {
-  if (!teams.length) return [];
   try {
     const allItems = [];
-    for (const team of teams.slice(0, 5)) {
-      const items = await fetchRSS(GOOGLE_NEWS_RSS(`${team} sports`));
-      allItems.push(...items.slice(0, 2).map(normalizeItem));
+    if (teams.length) {
+      for (const team of teams.slice(0, 5)) {
+        const items = await fetchRSS(GOOGLE_NEWS_RSS(`${team} sports`));
+        allItems.push(...items.slice(0, 2).map(normalizeItem));
+      }
+    } else {
+      // Default: top sports headlines
+      const items = await fetchRSS(GOOGLE_NEWS_RSS('sports news today'));
+      allItems.push(...items.slice(0, 6).map(normalizeItem));
     }
     return dedup(allItems).slice(0, 10);
   } catch (e) {
@@ -348,7 +356,11 @@ async function getTopicNews(interests = []) {
  */
 async function getMarkets(stocks = ['SPY', 'QQQ', 'BTC-USD']) {
   let yf;
-  try { yf = require('yahoo-finance2').default; } catch(e) { return []; }
+  try {
+    const mod = require('yahoo-finance2');
+    const YF = mod.default;
+    yf = new YF({ suppressNotices: ['yahooSurvey'] });
+  } catch(e) { return []; }
   const tickers = (stocks.length ? stocks : ['SPY', 'QQQ', 'BTC-USD']).map(s => s.trim());
   const results = [];
   for (const sym of tickers) {

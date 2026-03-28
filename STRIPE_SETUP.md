@@ -1,53 +1,64 @@
-# Stripe Setup — My Daily Briefing
+# Stripe Setup Guide — My Daily Briefing Pro
 
-## What's been built
-- Full subscription backend (payments.js)
-- $4.99/month checkout with 14-day free trial
-- Paywall overlay in briefing.html
-- Billing portal for customers to manage their sub
-- Webhook handler for subscription lifecycle
+Everything is built and waiting. You just need to create the Stripe product and paste 3 keys.
 
-## To go live (30 minutes)
+## Step 1 — Create Stripe Account
+1. Go to https://stripe.com → Create account
+2. Use r2clawd@gmail.com or your personal email
+3. Complete identity verification (takes ~5 min)
 
-### 1. Create Stripe account
-- Go to stripe.com → sign up with your email
-- Complete business verification (name, address, bank account for payouts)
+## Step 2 — Create the Product
+1. Dashboard → Products → Add product
+2. Name: **My Daily Briefing Pro**
+3. Pricing: **$7.99/month**, recurring
+4. Add a 14-day free trial
+5. Save → copy the **Price ID** (`price_...`)
 
-### 2. Create the product
-Stripe Dashboard → Products → Add Product
-- Name: My Daily Briefing Pro
-- Price: $4.99 / month (recurring)
-- Trial: 14 days free
-- Copy the **Price ID** (starts with `price_...`)
+## Step 3 — Get API Keys
+1. Dashboard → Developers → API Keys
+2. Copy **Secret key** (`sk_live_...`)
+   - Use test key (`sk_test_...`) first for testing
 
-### 3. Set up webhook
-Stripe Dashboard → Developers → Webhooks → Add endpoint
-- URL: https://[YOUR-TUNNEL-URL]/api/webhook
-- Events: checkout.session.completed, customer.subscription.updated, customer.subscription.deleted, invoice.payment_failed
-- Copy the **Webhook signing secret** (starts with `whsec_...`)
+## Step 4 — Set Up Webhook
+1. Dashboard → Developers → Webhooks → Add endpoint
+2. URL: `https://mydailybriefing-api-production.up.railway.app/api/webhook`
+3. Select events:
+   - `checkout.session.completed`
+   - `customer.subscription.updated`
+   - `customer.subscription.created`
+   - `customer.subscription.deleted`
+   - `invoice.payment_failed`
+4. Save → copy **Signing secret** (`whsec_...`)
 
-### 4. Get API keys
-Stripe Dashboard → Developers → API keys
-- Copy **Secret key** (starts with `sk_live_...` for prod, `sk_test_...` for test)
-- Copy **Publishable key** (starts with `pk_...`)
+## Step 5 — Add to Railway
+1. Go to Railway dashboard → mydailybriefing-api project
+2. Variables tab → Add:
+   - `STRIPE_SECRET_KEY` = `sk_live_...`
+   - `STRIPE_PRICE_ID` = `price_...`
+   - `STRIPE_WEBHOOK_SECRET` = `whsec_...`
+3. Railway auto-redeploys
 
-### 5. Store in environment
-Edit ~/Library/LaunchAgents/com.mydailybriefing.backend.plist
-Add to EnvironmentVariables:
-```xml
-<key>STRIPE_SECRET_KEY</key>
-<string>sk_live_...</string>
-<key>STRIPE_PRICE_ID</key>
-<string>price_...</string>
-<key>STRIPE_WEBHOOK_SECRET</key>
-<string>whsec_...</string>
-```
+## Step 6 — Tell R2
+Paste the 3 keys in Discord and I'll store them in keychain + verify everything works.
 
-Then: `launchctl unload ~/Library/LaunchAgents/com.mydailybriefing.backend.plist && launchctl load ~/Library/LaunchAgents/com.mydailybriefing.backend.plist`
+---
 
-Or just tell R2 "I have Stripe keys" and paste them — I'll store them and restart.
+## What's Already Built ✅
+- `payments.js` — full Stripe checkout, webhook, portal handling
+- `server.js` — `/api/checkout`, `/api/webhook`, `/api/portal/:token` routes wired
+- `db.js` — `stripe_customer_id`, `subscription_status`, `subscription_id`, `subscription_end` columns added
+- `briefing.html` — upgrade modal, paywall overlay, startCheckout(), openPortal() all working
+- Pro feature gates in API responses
 
-## Revenue math
-- 100 users × $4.99 = $499/mo
-- 500 users × $4.99 = $2,495/mo
-- 1,000 users × $4.99 = $4,990/mo
+## Pro Features Gated
+- X/Twitter timeline feed
+- Newsletter/Substack feeds
+- Extended stock tracking (>3 tickers)
+- Priority briefing refresh
+- Email digest delivery
+- Unlimited saved locations
+
+## Pricing Strategy
+- Free: core local news + weather + basic markets
+- Pro ($7.99/mo): X feed, newsletters, full stock suite, email delivery
+- 14-day free trial (no card required — convert on value)
