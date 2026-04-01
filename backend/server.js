@@ -84,9 +84,11 @@ registerReferralRoutes(app);
 // ─────────────────────────────────────────────
 //  Health check
 // ─────────────────────────────────────────────
-app.get('/health', (req, res) => {
+function healthHandler(req, res) {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
+}
+app.get('/health',     healthHandler);
+app.get('/api/health', healthHandler);
 
 // ─────────────────────────────────────────────
 //  Geo
@@ -831,6 +833,19 @@ app.get('/cities', (req, res) => {
   ).join('\n');
   res.setHeader('Content-Type', 'text/html');
   res.send(`<!DOCTYPE html><html><body><h1>Browse by City</h1><ul>${links}</ul></body></html>`);
+});
+
+// ── Trading Dashboard — Polymarket proxy (CORS bypass) ──────────────────────
+app.get('/api/pm-positions', async (req, res) => {
+  const wallet = '0x58A2e4C50f4b228D866b7222cF8cEd11c0E99Ae9';
+  try {
+    const r = await fetch(`https://data-api.polymarket.com/positions?user=${wallet}&limit=500`);
+    if (!r.ok) return res.status(r.status).json({ error: `Polymarket ${r.status}` });
+    const data = await r.json();
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.get('/sitemap-cities.xml', (req, res) => {

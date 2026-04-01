@@ -766,9 +766,55 @@
     color: #aaa; font-size: 13px;
     cursor: pointer; text-decoration: underline;
   }
+
+  /* ─── Upgrade to Pro CTA bar ─── */
+  #pro-cta-bar {
+    position: fixed;
+    bottom: calc(var(--safe-bot) + 60px); /* sits above tab bar */
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 150;
+    display: none; /* shown by JS for free users */
+    align-items: center;
+    gap: 10px;
+    background: rgba(20,18,10,.96);
+    border: 1px solid var(--accent);
+    border-radius: 100px;
+    padding: 9px 14px 9px 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,.5);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    white-space: nowrap;
+    max-width: calc(100vw - 32px);
+  }
+  #pro-cta-bar a {
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    letter-spacing: .01em;
+  }
+  #pro-cta-bar a:hover { opacity: .85; }
+  #pro-cta-bar .cta-dismiss {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 15px;
+    cursor: pointer;
+    padding: 0 0 0 2px;
+    line-height: 1;
+    transition: color var(--t);
+  }
+  #pro-cta-bar .cta-dismiss:hover { color: var(--t2); }
   </style>
 </head>
 <body>
+
+<!-- Upgrade to Pro CTA bar (free users only, dismissible per session) -->
+<div id="pro-cta-bar" role="banner" aria-label="Upgrade to Pro">
+  <a href="upgrade.html">✨ Upgrade to Pro — $9/mo, cancel anytime</a>
+  <button class="cta-dismiss" onclick="dismissProCta()" aria-label="Dismiss">✕</button>
+</div>
 
 <!-- Loading screen -->
 <div id="loading-screen">
@@ -820,6 +866,9 @@
     </div>
     <div class="greeting-str" id="greeting-str"></div>
   </div>
+
+  <!-- Referral widget inserted here by referral-widget.js -->
+  <div id="referral-widget-mount"></div>
 
   <div id="content"></div>
 </div>
@@ -1869,11 +1918,27 @@ async function share() {
     showToast('Could not build share link.');
     return;
   }
-  const shareUrl = `https://mydailybriefing.app/briefing.html?token=${encodeURIComponent(token)}&ref=share`;
+  const shareUrl = `https://mydailybriefing.app/?ref=${encodeURIComponent(token)}`;
+  const shareData = {
+    title: 'My Daily Briefing',
+    text: 'Check out my personalized morning briefing — local news, weather, markets, and more:',
+    url: shareUrl,
+  };
+  if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+    try {
+      await navigator.share(shareData);
+      return;
+    } catch (err) {
+      if (err.name === 'AbortError') return; // user cancelled — do nothing
+    }
+  }
+  // Fallback: copy link to clipboard
   try {
     await navigator.clipboard.writeText(shareUrl);
     showToast('Link copied!');
-  } catch { showToast(shareUrl); }
+  } catch {
+    showToast(shareUrl);
+  }
 }
 
 function showToast(msg, ms=2500) {
@@ -2312,6 +2377,22 @@ init();
   // Stop polling after 30 s to avoid running forever
   setTimeout(function () { clearInterval(_pendingRefCheck); }, 30000);
 })();
+
+// ── Upgrade-to-Pro CTA bar ────────────────────────────────────────────────
+(function initProCtaBar() {
+  // Don't show to Pro users
+  if (localStorage.getItem('is_pro') === 'true') return;
+  // Don't show if already dismissed this session
+  if (sessionStorage.getItem('pro_cta_dismissed')) return;
+  var bar = document.getElementById('pro-cta-bar');
+  if (bar) bar.style.display = 'flex';
+})();
+
+function dismissProCta() {
+  sessionStorage.setItem('pro_cta_dismissed', '1');
+  var bar = document.getElementById('pro-cta-bar');
+  if (bar) bar.style.display = 'none';
+}
 </script>
 </body>
 </html>
