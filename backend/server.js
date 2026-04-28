@@ -69,6 +69,16 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// ─────────────────────────────────────────────
+//  Health check, registered before static/auth middleware so Railway
+//  and external monitors can use either endpoint reliably.
+// ─────────────────────────────────────────────
+function healthHandler(req, res) {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+}
+app.get('/health', healthHandler);
+app.get('/api/health', healthHandler);
+
 // ── Serve frontend static files ───────────────────────────────────
 const publicDir = path.join(__dirname, 'public');
 if (require('fs').existsSync(publicDir)) {
@@ -80,15 +90,6 @@ if (require('fs').existsSync(publicDir)) {
 registerTwitterAuthRoutes(app);
 registerGoogleAuthRoutes(app);
 registerReferralRoutes(app);
-
-// ─────────────────────────────────────────────
-//  Health check
-// ─────────────────────────────────────────────
-function healthHandler(req, res) {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-}
-app.get('/health',     healthHandler);
-app.get('/api/health', healthHandler);
 
 // ─────────────────────────────────────────────
 //  Geo
