@@ -118,7 +118,7 @@ function renderCityPage(cityData) {
   </div>
 
   <script>
-    const API = window.location.hostname === 'localhost' ? 'http://localhost:3001' : 'https://mydailybriefing-api-production.up.railway.app';
+    const API = window.location.hostname === 'localhost' ? 'http://localhost:3001' : 'https://affiliated-jumping-delays-rachel.trycloudflare.com';
     async function joinWaitlist() {
       const email = document.getElementById('emailInput').value.trim();
       if (!email || !email.includes('@')) {

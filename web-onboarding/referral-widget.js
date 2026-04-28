@@ -21,7 +21,7 @@
     ? window.API
     : (window.location.hostname === 'localhost'
         ? 'http://localhost:3001'
-        : 'https://mydailybriefing-api-production.up.railway.app');
+        : 'https://affiliated-jumping-delays-rachel.trycloudflare.com');
 
   const STORAGE_KEY = 'briefing_token';
 
